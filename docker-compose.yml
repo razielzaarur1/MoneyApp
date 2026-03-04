@@ -1,0 +1,8 @@
+services:
+  moneyapp:
+    build: .
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./my_data_folder:/usr/src/app/data     # פה ישמרו העסקאות שלך
+      - ./my_secrets_folder:/usr/src/app/secrets # פה ישמרו הסיסמאות
