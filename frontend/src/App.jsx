@@ -162,115 +162,56 @@ function MobileNavItem({ icon, label, active, onClick }) {
   );
 }
 
+
 // ==========================================
-// PART 4: AUTHENTICATION & SESSIONS
+// PART 4: AUTH SCREEN
 // ==========================================
-app.post('/api/auth/register', (req, res) => {
-  const { username, password } = req.body;
-  console.log(`[AUTH] 👤 Registration attempt: ${username}`);
-  const userId = crypto.randomUUID();
-  const salt = crypto.randomBytes(16).toString('hex');
-  const passwordHash = crypto.scryptSync(password, salt, 64).toString('hex');
+function AuthScreen({ onLogin }) {
+  const [isRegister, setIsRegister] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  db.run(`INSERT INTO users (id, username, passwordHash, salt) VALUES (?, ?, ?, ?)`, [userId, username, passwordHash, salt], function(err) {
-    if (err) return res.status(400).json({ success: false, message: 'שם המשתמש כבר קיים' });
-    
-    db.run(`UPDATE transactions SET userId = ? WHERE userId IS NULL`, [userId]);
-    db.run(`UPDATE accounts SET userId = ? WHERE userId IS NULL`, [userId]);
-    credsDb.run(`UPDATE saved_credentials SET userId = ? WHERE userId IS NULL`, [userId]);
-    
-    console.log(`[AUTH] ✅ Registered: ${userId}`);
-    res.json({ success: true });
-  });
-});
-
-app.post('/api/auth/login', (req, res) => {
-  const { username, password } = req.body;
-  console.log(`[AUTH] 🔐 Login attempt: ${username}`);
-  
-  db.get(`SELECT * FROM users WHERE username = ?`, [username], (err, user) => {
-    if (!user) return res.status(401).json({ success: false, message: 'פרטים שגויים' });
-    
-    const hashVerify = crypto.scryptSync(password, user.salt, 64).toString('hex');
-    if (hashVerify !== user.passwordHash) return res.status(401).json({ success: false, message: 'פרטים שגויים' });
-
-    const masterKey = crypto.pbkdf2Sync(password, user.salt, 100000, 32, 'sha256');
-    const token = crypto.randomUUID();
-    activeSessions.set(token, { userId: user.id, masterKey });
-    
-    console.log(`[AUTH] ✅ Login success: Master Key in RAM for ${username}`);
-    res.json({ success: true, token });
-  });
-});
-
-const requireAuth = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  const session = activeSessions.get(token);
-  if (!session) return res.status(401).json({ success: false, message: 'לא מורשה' });
-  req.user = session;
-  next();
-};
-
-// --- פעולות אבטחה ומשתמשים ---
-app.delete('/api/auth/delete-user', requireAuth, (req, res) => {
-  const userId = req.user.userId;
-  console.log(`[AUTH] 🗑️ מחיקת משתמש ונתונים: ${userId}`);
-  db.run(`DELETE FROM users WHERE id = ?`, [userId]);
-  db.run(`DELETE FROM accounts WHERE userId = ?`, [userId]);
-  db.run(`DELETE FROM transactions WHERE userId = ?`, [userId]);
-  db.run(`DELETE FROM settings WHERE userId = ?`, [userId]);
-  credsDb.run(`DELETE FROM saved_credentials WHERE userId = ?`, [userId]);
-  activeSessions.delete(req.headers.authorization?.split(' ')[1]);
-  res.json({ success: true });
-});
-
-app.post('/api/auth/change-password', requireAuth, async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
-  const userId = req.user.userId;
-
-  db.get(`SELECT * FROM users WHERE id = ?`, [userId], async (err, user) => {
-    const hashVerify = crypto.scryptSync(currentPassword, user.salt, 64).toString('hex');
-    if (hashVerify !== user.passwordHash) return res.status(400).json({ success: false, message: 'הסיסמה הנוכחית שגויה' });
-
-    const oldKey = req.user.masterKey;
-    const newSalt = crypto.randomBytes(16).toString('hex');
-    const newHash = crypto.scryptSync(newPassword, newSalt, 64).toString('hex');
-    const newKey = crypto.pbkdf2Sync(newPassword, newSalt, 100000, 32, 'sha256');
-
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true); setError('');
+    const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
     try {
-      console.log(`[AUTH] 🔄 מתחיל תהליך הצפנה מחדש של מסד הנתונים...`);
-      // 1. חשבונות
-      const accounts = await new Promise(r => db.all(`SELECT * FROM accounts WHERE userId = ?`, [userId], (e, rows) => r(rows)));
-      for(let acc of accounts) {
-        const decBal = decryptData(acc.balance, oldKey);
-        await new Promise(r => db.run(`UPDATE accounts SET balance = ? WHERE id = ? AND userId = ?`, [encryptData(decBal, newKey), acc.id, userId], r));
-      }
-      // 2. תנועות
-      const txs = await new Promise(r => db.all(`SELECT * FROM transactions WHERE userId = ?`, [userId], (e, rows) => r(rows)));
-      for(let tx of txs) {
-        const encDesc = encryptData(decryptData(tx.description, oldKey), newKey);
-        const encAmt = encryptData(decryptData(tx.amount, oldKey), newKey);
-        const encNotes = encryptData(decryptData(tx.notes, oldKey), newKey);
-        const encTags = encryptData(decryptData(tx.tags, oldKey), newKey);
-        await new Promise(r => db.run(`UPDATE transactions SET description=?, amount=?, notes=?, tags=? WHERE id=? AND userId=?`, [encDesc, encAmt, encNotes, encTags, tx.id, userId], r));
-      }
-      // 3. כספת
-      const creds = await new Promise(r => credsDb.all(`SELECT * FROM saved_credentials WHERE userId = ?`, [userId], (e, rows) => r(rows)));
-      for(let cred of creds) {
-        const encPass = encryptData(decryptData(cred.password, oldKey), newKey);
-        await new Promise(r => credsDb.run(`UPDATE saved_credentials SET password = ? WHERE id = ? AND userId = ?`, [encPass, cred.id, userId], r));
-      }
-      // 4. משתמש
-      await new Promise(r => db.run(`UPDATE users SET passwordHash=?, salt=? WHERE id=?`, [newHash, newSalt, userId], r));
-      
-      activeSessions.get(req.headers.authorization?.split(' ')[1]).masterKey = newKey;
-      console.log(`[AUTH] ✅ ההצפנה מחדש הסתיימה בהצלחה.`);
-      res.json({ success: true });
-    } catch(e) {
-      res.status(500).json({ success: false, message: 'שגיאה בהחלפת מפתח הצפנה' });
-    }
-  });
-});
+      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+      const data = await res.json();
+      if (data.success) {
+        if (isRegister) { setIsRegister(false); setError('נרשמת בהצלחה! כעת התחבר עם המפתח שיצרת.'); } 
+        else { sessionStorage.setItem('app_token', data.token); onLogin(data.token); }
+      } else { setError(data.message || 'שגיאה בפעולה'); }
+    } catch(e) { setError('שגיאת תקשורת'); }
+    setLoading(false);
+  };
+
+  return (
+    <div dir="rtl" className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+         <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-indigo-500/20 rounded-full blur-[100px]"></div>
+         <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[100px]"></div>
+      </div>
+      <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-700 p-8 rounded-3xl w-full max-w-md shadow-2xl relative z-10">
+        <div className="text-center mb-8">
+           <div className="inline-flex p-4 bg-indigo-500/10 rounded-2xl text-indigo-400 mb-4"><Lock size={32}/></div>
+           <h1 className="text-3xl font-bold text-white tracking-tight">כספת כיס חכם</h1>
+           <p className="text-slate-400 mt-2 text-sm">הנתונים שלך מוצפנים ונפתחים רק עם המפתח הזה.</p>
+        </div>
+        {error && <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl mb-6 text-sm font-medium text-center border border-rose-500/20">{error}</div>}
+        <form onSubmit={handleSubmit} className="space-y-5">
+           <div><label className="text-sm font-medium text-slate-400 mb-1 block">שם משתמש</label><input type="text" required value={username} onChange={e=>setUsername(e.target.value)} className="w-full bg-slate-900/50 border border-slate-700 text-white p-3 rounded-xl outline-none focus:border-indigo-500 transition-colors" /></div>
+           <div><label className="text-sm font-medium text-slate-400 mb-1 block">מפתח כספת (סיסמה)</label><input type="password" required value={password} onChange={e=>setPassword(e.target.value)} className="w-full bg-slate-900/50 border border-slate-700 text-white p-3 rounded-xl outline-none focus:border-indigo-500 transition-colors text-left" dir="ltr" /></div>
+           <button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] disabled:opacity-50">{loading ? 'מפענח...' : isRegister ? 'יצירת כספת מוצפנת' : 'פתח כספת'}</button>
+        </form>
+        <div className="mt-6 text-center"><button onClick={() => {setIsRegister(!isRegister); setError('');}} className="text-sm text-slate-400 hover:text-white transition-colors">{isRegister ? 'יש לך כבר מפתח? התחבר עכשיו' : 'משתמש חדש? צור כספת אישית'}</button></div>
+      </div>
+    </div>
+  );
+}
+
 
 // ==========================================
 // PART 5: MAIN APP SHELL & STATE
