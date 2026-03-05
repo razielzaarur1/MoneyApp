@@ -1,345 +1,404 @@
+// ==========================================
+// PART 1: IMPORTS & ERROR BOUNDARY
+// ==========================================
+// ==========================================
+// PART 1: IMPORTS & ERROR BOUNDARY
+// ==========================================
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Home, CreditCard, ListOrdered, PieChart, Settings,
-  RefreshCw, AlertCircle, CheckCircle2, TrendingUp, TrendingDown,
-  Building, Wallet, Plus, Shield, ChevronLeft, ChevronDown, ChevronUp, ChevronRight,
-  ShoppingBag, Utensils, Car, Link as LinkIcon, Unlink,
-  MoreHorizontal, Calendar, Edit2, X, Tag as TagIcon, Check, Lock,
-  Heart, Users, Ticket, Plane, Briefcase, Landmark, Info, Clock, AlignLeft, FileText, Save
+  Home, CreditCard, ListOrdered, PieChart, Settings, RefreshCw, AlertCircle, CheckCircle2, TrendingUp, TrendingDown,
+  Building, Wallet, Plus, Shield, ChevronLeft, ChevronDown, ChevronUp, ChevronRight, ShoppingBag, Utensils, Car, 
+  Link as LinkIcon, Unlink, MoreHorizontal, Calendar, Edit2, X, Tag as TagIcon, Check, Lock, Clock, AlignLeft, 
+  FileText, Save, Download, Info, Sun, Moon, Activity, ArrowDownRight, ArrowUpRight, Trash2, 
+  Heart, Users, Ticket, Plane, Briefcase, Landmark, /* האייקונים שהיו חסרים */
+  Tv, Key, Droplet, Flame, Hammer, Sparkles, Flower, Sofa, Monitor, Shirt, Watch, Wind, Fuel, Bus, ScrollText, 
+  Wrench, Route, Stethoscope, HeartPulse, Pill, Eye, Scissors, Dumbbell, Baby, GraduationCap, Tent, User, Gamepad2, 
+  Package, HandHeart, Dog, Gift, Music, BookOpen, Bike, Trophy, Pizza, Coffee, Bed, Map, Mail, Printer, Lightbulb, Percent, Zap
 } from 'lucide-react';
 
-const IconMap = {
-  Home, ShoppingBag, Car, Heart, Users, Ticket, Utensils, Plane, Briefcase, Landmark, MoreHorizontal, Wallet, Tag: TagIcon
-};
+const themeStyles = `
+  body { font-family: 'Assistant', sans-serif; font-weight: 400; }
+  :root {
+    --color-bg-main: #f8fafc; --color-bg-card: rgba(255, 255, 255, 0.85); --color-bg-card-hover: rgba(255, 255, 255, 1);
+    --color-bg-input: rgba(241, 245, 249, 0.8); --color-text-main: #334155; --color-text-muted: #64748b;
+    --color-border: rgba(203, 213, 225, 0.8); --color-nav-bg: rgba(255, 255, 255, 0.85); --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  }
+  .dark-theme {
+    --color-bg-main: #020617; --color-bg-card: rgba(15, 23, 42, 0.6); --color-bg-card-hover: rgba(30, 41, 59, 0.8);
+    --color-bg-input: rgba(15, 23, 42, 0.8); --color-text-main: #f1f5f9; --color-text-muted: #94a3b8;
+    --color-border: rgba(51, 65, 85, 0.5); --color-nav-bg: rgba(15, 23, 42, 0.8); --shadow-card: 0 4px 30px rgba(0,0,0,0.4);
+  }
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 10px; }
+`;
 
-// --- Category Tree ---
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  render() {
+    if (this.state.hasError) return (<div style={{ padding: '2rem', color: 'red', direction: 'ltr', background: '#fee' }}><h2>🚨 משהו השתבש בריאקט!</h2><pre>{this.state.error?.toString()}</pre></div>);
+    return this.props.children;
+  }
+}
+
+// ==========================================
+// PART 2: CATEGORY DATA & ICONS
+// ==========================================
+const IconMap = { Home, ShoppingBag, Car, Heart, Users, Ticket, Utensils, Plane, Briefcase, Landmark, MoreHorizontal, Wallet, Tag: TagIcon };
+
 const INCOMES = [
-  { id: 'inc_salary', name: 'משכורת', icon: 'Wallet', color: 'text-green-600', bg: 'bg-green-50', barBg: 'bg-green-500', type: 'income' },
-  { id: 'inc_allowance', name: 'קצבה או מלגה', icon: 'Landmark', color: 'text-green-600', bg: 'bg-green-50', barBg: 'bg-green-500', type: 'income' },
-  { id: 'inc_property', name: 'הכנסה מנכס', icon: 'Home', color: 'text-green-600', bg: 'bg-green-50', barBg: 'bg-green-500', type: 'income' },
-  { id: 'inc_business', name: 'הכנסה מעסק', icon: 'Briefcase', color: 'text-green-600', bg: 'bg-green-50', barBg: 'bg-green-500', type: 'income' },
-  { id: 'inc_dividends', name: 'דיווידנדים ורווחים', icon: 'TrendingUp', color: 'text-green-600', bg: 'bg-green-50', barBg: 'bg-green-500', type: 'income' },
-  { id: 'inc_misc', name: 'הכנסות שונות', icon: 'MoreHorizontal', color: 'text-green-600', bg: 'bg-green-50', barBg: 'bg-green-500', type: 'income' }
+  { id: 'inc_salary', name: 'משכורת', icon: Wallet, color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', type: 'income' },
+  { id: 'inc_allowance', name: 'קצבה או מלגה', icon: Landmark, color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', type: 'income' },
+  { id: 'inc_property', name: 'הכנסה מנכס', icon: Home, color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', type: 'income' },
+  { id: 'inc_business', name: 'הכנסה מעסק', icon: Briefcase, color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', type: 'income' },
+  { id: 'inc_dividends', name: 'דיווידנדים ורווחים', icon: TrendingUp, color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', type: 'income' },
+  { id: 'inc_misc', name: 'הכנסות שונות', icon: MoreHorizontal, color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', type: 'income' }
 ];
 
 const EXPENSES = [
-  {
-    id: 'exp_household', name: 'משק בית', icon: 'Home', color: 'text-indigo-600', bg: 'bg-indigo-50', barBg: 'bg-indigo-500', type: 'expense',
-    subs: [
-      { id: 'hh_telecom', name: 'חשבונות טלפון, טלוויזיה ואינטרנט' }, { id: 'hh_mortgage', name: 'משכנתא' }, { id: 'hh_rent', name: 'דמי שכירות' }, { id: 'hh_taxes', name: 'ארנונה ורשות מקומית' }, { id: 'hh_committee', name: 'ועד בית' }, { id: 'hh_water', name: 'מים' }, { id: 'hh_gas', name: 'גז והסקה' }, { id: 'hh_electricity', name: 'חשמל' }, { id: 'hh_insurance', name: 'ביטוח דירה' }, { id: 'hh_maintenance', name: 'אחזקת בית ותיקונים' }, { id: 'hh_cleaning', name: 'ניקיון וכביסה' }, { id: 'hh_gardening', name: 'גינון ונוי' }, { id: 'hh_misc', name: 'משק בית - שונות' }
-    ]
-  },
-  {
-    id: 'exp_shopping', name: 'עושים קניות', icon: 'ShoppingBag', color: 'text-pink-600', bg: 'bg-pink-50', barBg: 'bg-pink-500', type: 'expense',
-    subs: [
-      { id: 'shop_supermarket', name: 'מזון, משקאות, סופר ומכולת' }, { id: 'shop_furniture', name: 'ריהוט ואביזרים לבית' }, { id: 'shop_electronics', name: 'מוצרי חשמל, מחשבים ואלקטרוניקה' }, { id: 'shop_clothing', name: 'בגדים, נעליים ואקססוריז' }, { id: 'shop_jewelry', name: 'תכשיטים ושעונים' }, { id: 'shop_tobacco', name: 'סיגריות, טבק ומוצרי עישון' }, { id: 'shop_misc', name: 'עושים קניות - שונות' }
-    ]
-  },
-  {
-    id: 'exp_transport', name: 'רכב ותחבורה', icon: 'Car', color: 'text-orange-600', bg: 'bg-orange-50', barBg: 'bg-orange-500', type: 'expense',
-    subs: [
-      { id: 'trans_fuel', name: 'דלק וטעינה לרכב' }, { id: 'trans_rental', name: 'השכרת רכב' }, { id: 'trans_public', name: 'תחבורה ציבורית' }, { id: 'trans_parking', name: 'חנייה' }, { id: 'trans_fines', name: 'קנסות ודו"חות' }, { id: 'trans_garage', name: 'מוסך, אחזקת רכב ואביזרים' }, { id: 'trans_tolls', name: 'כבישי אגרה' }, { id: 'trans_insurance', name: 'ביטוחי רכב' }, { id: 'trans_misc', name: 'רכב ותחבורה - שונות' }
-    ]
-  },
-  {
-    id: 'exp_health', name: 'בריאות וטיפוח אישי', icon: 'Heart', color: 'text-red-500', bg: 'bg-red-50', barBg: 'bg-red-500', type: 'expense',
-    subs: [
-      { id: 'hlth_alternative', name: 'רפואה משלימה' }, { id: 'hlth_services', name: 'שירותי בריאות, ייעוץ וטיפול' }, { id: 'hlth_insurance', name: 'ביטוחי בריאות וחיים' }, { id: 'hlth_dental', name: 'רפואת שיניים' }, { id: 'hlth_optical', name: 'עיניים ואופטיקה' }, { id: 'hlth_pharmacy', name: 'בתי מרקחת וחנויות פארם' }, { id: 'hlth_beauty', name: 'מספרה, טיפולי יופי ומוצרי טיפוח' }, { id: 'hlth_fitness', name: 'כושר' }, { id: 'hlth_misc', name: 'בריאות וטיפוח אישי - שונות' }
-    ]
-  },
-  {
-    id: 'exp_family', name: 'ילדים, משפחה והשכלה', icon: 'Users', color: 'text-teal-600', bg: 'bg-teal-50', barBg: 'bg-teal-500', type: 'expense',
-    subs: [
-      { id: 'fam_school', name: 'גן ובית ספר' }, { id: 'fam_higher_ed', name: 'השכלה גבוהה' }, { id: 'fam_activities', name: 'צהרונים, חוגים, פעילויות וקייטנות' }, { id: 'fam_babysitter', name: 'שמרטף (בייביסיטר)' }, { id: 'fam_toys', name: 'צעצועים, משחקים ודמי כיס' }, { id: 'fam_baby', name: 'מוצרים לגיל הרך' }, { id: 'fam_support', name: 'תמיכה בבני משפחה ודמי מזונות' }, { id: 'fam_pets', name: 'חיות מחמד' }, { id: 'fam_misc', name: 'ילדים, משפחה והשכלה - שונות' }
-    ]
-  },
-  {
-    id: 'exp_leisure', name: 'פנאי, תרבות והעשרה', icon: 'Ticket', color: 'text-purple-600', bg: 'bg-purple-50', barBg: 'bg-purple-500', type: 'expense',
-    subs: [
-      { id: 'leis_shows', name: 'הצגות, הופעות וקולנוע' }, { id: 'leis_gifts', name: 'מתנות, חתונות ואירועים' }, { id: 'leis_music', name: 'מוזיקה וקריאה' }, { id: 'leis_workshops', name: 'סדנאות ושיעורים' }, { id: 'leis_hobbies', name: 'ציוד לתחביבים וספורט' }, { id: 'leis_sports', name: 'אירועי ספורט' }, { id: 'leis_misc', name: 'פנאי, תרבות והעשרה - שונות' }
-    ]
-  },
-  {
-    id: 'exp_dining', name: 'אוכלים בחוץ', icon: 'Utensils', color: 'text-amber-600', bg: 'bg-amber-50', barBg: 'bg-amber-500', type: 'expense',
-    subs: [
-      { id: 'dine_fastfood', name: 'מזון מהיר ומשלוחים' }, { id: 'dine_restaurants', name: 'בתי קפה, מסעדות ופאבים' }, { id: 'dine_misc', name: 'אוכלים בחוץ - שונות' }
-    ]
-  },
-  {
-    id: 'exp_travel', name: 'חופשות וטיולים', icon: 'Plane', color: 'text-sky-600', bg: 'bg-sky-50', barBg: 'bg-sky-500', type: 'expense',
-    subs: [
-      { id: 'trvl_flights', name: 'טיסות' }, { id: 'trvl_attractions', name: 'אטרקציות' }, { id: 'trvl_accommodation', name: 'לינה' }, { id: 'trvl_misc', name: 'חופשות וטיולים - שונות' }
-    ]
-  },
-  {
-    id: 'exp_business', name: 'שירותים עיסקיים', icon: 'Briefcase', color: 'text-slate-600', bg: 'bg-slate-50', barBg: 'bg-slate-500', type: 'expense',
-    subs: [
-      { id: 'biz_delivery', name: 'דואר ומשלוחים' }, { id: 'biz_legal', name: 'הנה"ח ושירותים משפטיים' }, { id: 'biz_marketing', name: 'שיווק, פרסום ודפוס' }, { id: 'biz_consulting', name: 'ייעוץ והשתלמויות' }, { id: 'biz_misc', name: 'שירותים עיסקיים - שונות' }
-    ]
-  },
-  {
-    id: 'exp_financial', name: 'שירותים פיננסיים', icon: 'Landmark', color: 'text-emerald-600', bg: 'bg-emerald-50', barBg: 'bg-emerald-500', type: 'expense',
-    subs: [
-      { id: 'fin_loans', name: 'פירעון הלוואה' }, { id: 'fin_fees', name: 'עמלות' }, { id: 'fin_interest', name: 'תשלומי ריביות והפסדים' }, { id: 'fin_misc', name: 'שירותים פיננסיים - שונות' }
-    ]
-  },
-  {
-    id: 'exp_misc', name: 'שונות', icon: 'MoreHorizontal', color: 'text-gray-600', bg: 'bg-gray-50', barBg: 'bg-gray-500', type: 'expense',
-    subs: [
-      { id: 'misc_taxes', name: 'מיסים ושרותי ממשלה' }, { id: 'misc_religion', name: 'דת ותשמישי קדושה' }, { id: 'misc_donations', name: 'תרומות' }, { id: 'misc_gambling', name: 'הימורים' }, { id: 'misc_uncategorized', name: 'ללא סיווג' }, { id: 'misc_other', name: 'שונות' }
-    ]
-  }
+  { id: 'exp_household', name: 'משק בית', icon: Home, color: 'text-indigo-500 dark:text-indigo-400', bg: 'bg-indigo-500/10 dark:bg-indigo-500/20', type: 'expense', subs: [{ id: 'hh_telecom', name: 'טלפון ואינטרנט', icon: Tv }, { id: 'hh_mortgage', name: 'משכנתא', icon: Key }, { id: 'hh_rent', name: 'דמי שכירות', icon: Home }, { id: 'hh_taxes', name: 'ארנונה', icon: Landmark }, { id: 'hh_committee', name: 'ועד בית', icon: Users }, { id: 'hh_water', name: 'מים', icon: Droplet }, { id: 'hh_gas', name: 'גז והסקה', icon: Flame }, { id: 'hh_electricity', name: 'חשמל', icon: Zap }, { id: 'hh_insurance', name: 'ביטוח דירה', icon: Shield }, { id: 'hh_maintenance', name: 'אחזקת בית', icon: Hammer }, { id: 'hh_cleaning', name: 'ניקיון וכביסה', icon: Sparkles }, { id: 'hh_gardening', name: 'גינון ונוי', icon: Flower }, { id: 'hh_misc', name: 'משק בית - שונות', icon: MoreHorizontal }] },
+  { id: 'exp_shopping', name: 'עושים קניות', icon: ShoppingBag, color: 'text-pink-500 dark:text-pink-400', bg: 'bg-pink-500/10 dark:bg-pink-500/20', type: 'expense', subs: [{ id: 'shop_supermarket', name: 'סופר ומכולת', icon: ShoppingBag }, { id: 'shop_furniture', name: 'ריהוט לבית', icon: Sofa }, { id: 'shop_electronics', name: 'אלקטרוניקה', icon: Monitor }, { id: 'shop_clothing', name: 'בגדים והנעלה', icon: Shirt }, { id: 'shop_jewelry', name: 'תכשיטים ושעונים', icon: Watch }, { id: 'shop_tobacco', name: 'טבק ועישון', icon: Wind }, { id: 'shop_misc', name: 'קניות - שונות', icon: MoreHorizontal }] },
+  { id: 'exp_transport', name: 'רכב ותחבורה', icon: Car, color: 'text-orange-500 dark:text-orange-400', bg: 'bg-orange-500/10 dark:bg-orange-500/20', type: 'expense', subs: [{ id: 'trans_fuel', name: 'דלק וטעינה', icon: Fuel }, { id: 'trans_rental', name: 'השכרת רכב', icon: Car }, { id: 'trans_public', name: 'תחבורה ציבורית', icon: Bus }, { id: 'trans_parking', name: 'חנייה', icon: Map }, { id: 'trans_fines', name: 'קנסות', icon: ScrollText }, { id: 'trans_garage', name: 'מוסך ואחזקה', icon: Wrench }, { id: 'trans_tolls', name: 'כבישי אגרה', icon: Route }, { id: 'trans_insurance', name: 'ביטוח רכב', icon: Shield }, { id: 'trans_misc', name: 'תחבורה - שונות', icon: MoreHorizontal }] },
+  { id: 'exp_health', name: 'בריאות וטיפוח', icon: Heart, color: 'text-rose-500 dark:text-rose-400', bg: 'bg-rose-500/10 dark:bg-rose-500/20', type: 'expense', subs: [{ id: 'hlth_alternative', name: 'רפואה משלימה', icon: Activity }, { id: 'hlth_services', name: 'ייעוץ וטיפול', icon: Stethoscope }, { id: 'hlth_insurance', name: 'ביטוחי בריאות', icon: HeartPulse }, { id: 'hlth_dental', name: 'רפואת שיניים', icon: Activity }, { id: 'hlth_optical', name: 'אופטיקה', icon: Eye }, { id: 'hlth_pharmacy', name: 'בתי מרקחת', icon: Pill }, { id: 'hlth_beauty', name: 'טיפולי יופי', icon: Scissors }, { id: 'hlth_fitness', name: 'כושר', icon: Dumbbell }, { id: 'hlth_misc', name: 'בריאות - שונות', icon: MoreHorizontal }] },
+  { id: 'exp_family', name: 'משפחה והשכלה', icon: Users, color: 'text-teal-500 dark:text-teal-400', bg: 'bg-teal-500/10 dark:bg-teal-500/20', type: 'expense', subs: [{ id: 'fam_school', name: 'גן ובית ספר', icon: Baby }, { id: 'fam_higher_ed', name: 'השכלה גבוהה', icon: GraduationCap }, { id: 'fam_activities', name: 'חוגים וקייטנות', icon: Tent }, { id: 'fam_babysitter', name: 'בייביסיטר', icon: User }, { id: 'fam_toys', name: 'משחקים ודמי כיס', icon: Gamepad2 }, { id: 'fam_baby', name: 'מוצרים לגיל הרך', icon: Package }, { id: 'fam_support', name: 'תמיכה ומזונות', icon: HandHeart }, { id: 'fam_pets', name: 'חיות מחמד', icon: Dog }, { id: 'fam_misc', name: 'משפחה - שונות', icon: MoreHorizontal }] },
+  { id: 'exp_leisure', name: 'פנאי ותרבות', icon: Ticket, color: 'text-purple-500 dark:text-purple-400', bg: 'bg-purple-500/10 dark:bg-purple-500/20', type: 'expense', subs: [{ id: 'leis_shows', name: 'הופעות וקולנוע', icon: Ticket }, { id: 'leis_gifts', name: 'מתנות ואירועים', icon: Gift }, { id: 'leis_music', name: 'מוזיקה וקריאה', icon: Music }, { id: 'leis_workshops', name: 'סדנאות', icon: BookOpen }, { id: 'leis_hobbies', name: 'תחביבים וספורט', icon: Bike }, { id: 'leis_sports', name: 'אירועי ספורט', icon: Trophy }, { id: 'leis_misc', name: 'פנאי - שונות', icon: MoreHorizontal }] },
+  { id: 'exp_dining', name: 'אוכלים בחוץ', icon: Utensils, color: 'text-amber-500 dark:text-amber-400', bg: 'bg-amber-500/10 dark:bg-amber-500/20', type: 'expense', subs: [{ id: 'dine_fastfood', name: 'מזון מהיר ומשלוחים', icon: Pizza }, { id: 'dine_restaurants', name: 'מסעדות ופאבים', icon: Coffee }, { id: 'dine_misc', name: 'אוכלים בחוץ - שונות', icon: Utensils }] },
+  { id: 'exp_travel', name: 'חופשות וטיולים', icon: Plane, color: 'text-sky-500 dark:text-sky-400', bg: 'bg-sky-500/10 dark:bg-sky-500/20', type: 'expense', subs: [{ id: 'trvl_flights', name: 'טיסות', icon: Plane }, { id: 'trvl_attractions', name: 'אטרקציות', icon: Map }, { id: 'trvl_accommodation', name: 'לינה', icon: Bed }, { id: 'trvl_misc', name: 'חופשות - שונות', icon: MoreHorizontal }] },
+  { id: 'exp_business', name: 'שירותים עיסקיים', icon: Briefcase, color: 'text-slate-500 dark:text-slate-400', bg: 'bg-slate-500/10 dark:bg-slate-500/20', type: 'expense', subs: [{ id: 'biz_delivery', name: 'דואר ומשלוחים', icon: Mail }, { id: 'biz_legal', name: 'הנה"ח ומשפטי', icon: FileText }, { id: 'biz_marketing', name: 'שיווק ופרסום', icon: Printer }, { id: 'biz_consulting', name: 'ייעוץ והשתלמויות', icon: Lightbulb }, { id: 'biz_misc', name: 'עסקי - שונות', icon: MoreHorizontal }] },
+  { id: 'exp_financial', name: 'שירותים פיננסיים', icon: Landmark, color: 'text-cyan-600', bg: 'bg-cyan-50', type: 'expense', subs: [{ id: 'fin_loans', name: 'פירעון הלוואה', icon: Percent }, { id: 'fin_fees', name: 'עמלות', icon: TrendingDown }, { id: 'fin_interest', name: 'תשלומי ריביות', icon: TrendingDown }, { id: 'fin_misc', name: 'פיננסי - שונות', icon: MoreHorizontal }] },
+  { id: 'exp_misc', name: 'שונות', icon: MoreHorizontal, color: 'text-gray-500 dark:text-gray-400', bg: 'bg-gray-500/10 dark:bg-gray-500/20', type: 'expense', subs: [{ id: 'misc_taxes', name: 'מיסים ורשויות', icon: Landmark }, { id: 'misc_religion', name: 'דת ותרומות', icon: HandHeart }, { id: 'misc_gambling', name: 'הימורים', icon: Trophy }, { id: 'misc_uncategorized', name: 'ללא סיווג', icon: MoreHorizontal }, { id: 'misc_other', name: 'שונות', icon: MoreHorizontal }] }
 ];
-
 const ALL_CATEGORIES = [...INCOMES, ...EXPENSES];
 
+// ==========================================
+// PART 3: UTILS & SHARED UI
+// ==========================================
 const getCategoryDetails = (subCatId) => {
-  if (!subCatId) return { mainCat: EXPENSES[10], subCat: EXPENSES[10].subs[4] }; 
+  if (!subCatId) return { mainCat: EXPENSES[10], subCat: EXPENSES[10].subs[3] }; 
   const incomeCat = INCOMES.find(inc => inc.id === subCatId);
   if (incomeCat) return { mainCat: incomeCat, subCat: incomeCat };
   for (const mainCat of EXPENSES) {
     const subCat = mainCat.subs?.find(sub => sub.id === subCatId);
     if (subCat) return { mainCat, subCat };
   }
-  return { mainCat: EXPENSES[10], subCat: EXPENSES[10].subs[4] };
+  return { mainCat: EXPENSES[10], subCat: EXPENSES[10].subs[3] };
 };
 
-// אלגוריתם חכם לחישוב חיוב קרוב
+// פונקציית תאריכים מותאמת אישית עם Fallback הגנתי
+const getCustomMonthYear = (dateString, startDay) => {
+  if (!dateString || typeof dateString !== 'string') return null;
+  const parts = dateString.split(/[\/\-.]/);
+  if (parts.length >= 3) {
+    let d = parseInt(parts[0], 10);
+    let m = parseInt(parts[1], 10);
+    let y = parseInt(parts[2], 10);
+    let start = parseInt(startDay, 10) || 1;
+
+    if (start > 1 && d < start) {
+      m -= 1;
+      if (m < 1) { m = 12; y -= 1; }
+    }
+    return `${String(m).padStart(2, '0')}/${y}`;
+  }
+  return null;
+};
+
 const calculateUpcomingCharge = (acc, transactions) => {
-  if (acc.type === 'bank') return acc.balance; 
-  
+  if (acc.type === 'bank') return acc.balance || 0; 
+  let scraperBalance = Math.abs(acc.balance || 0);
   const accountTxs = transactions.filter(t => t.accountId === acc.id || t.account === acc.id);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
   
   let upcomingTxsSum = 0;
-
   accountTxs.forEach(tx => {
-    // ממירים את התאריך (פורמט DD/MM/YYYY בישראל)
     const dateStr = tx.billingDate || tx.date;
-    if(!dateStr) return;
-    
-    const parts = dateStr.split('/');
-    if (parts.length === 3) {
+    if(!dateStr || typeof dateStr !== 'string') return;
+    const parts = dateStr.split(/[\/\-.]/);
+    if (parts.length >= 3) {
       const bDate = new Date(parts[2], parts[1] - 1, parts[0]);
-      // אם העסקה ממתינה או שהתאריך שלה עתידי/היום, היא תיכנס לחיוב הקרוב
-      if (tx.status === 'pending' || bDate >= today) {
-        upcomingTxsSum += Math.abs(tx.amount);
-      }
+      if (tx.status === 'pending' || bDate >= today) upcomingTxsSum += Math.abs(tx.amount || 0);
     }
   });
-  
-  return upcomingTxsSum;
+  return upcomingTxsSum > scraperBalance ? upcomingTxsSum : scraperBalance;
 };
 
-export default function App() {
+const NeonCard = ({ children, className = "", noPadding = false }) => (
+  <div className={`bg-[var(--color-bg-card)] backdrop-blur-xl border border-[var(--color-border)] rounded-2xl overflow-hidden shadow-[var(--shadow-card)] transition-colors ${noPadding ? '' : 'p-6'} ${className}`}>
+    {children}
+  </div>
+);
+
+function StatCard({ title, amount, trend, isPositive, icon, color }) {
+  const colorMap = { blue: 'text-blue-500 bg-blue-500/10', green: 'text-emerald-500 bg-emerald-500/10', red: 'text-rose-500 bg-rose-500/10' };
+  const bgClass = colorMap[color] || colorMap.blue;
+  return (
+    <NeonCard className="relative group">
+      <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl -mr-8 -mt-8 transition-all ${bgClass}`}></div>
+      <div className="relative z-10 flex justify-between items-start">
+        <div>
+          <div className="text-[var(--color-text-muted)] text-sm mb-1">{title}</div>
+          <div dir="ltr" className="text-3xl font-medium text-[var(--color-text-main)] text-right">{amount}</div>
+          <div className="text-xs text-[var(--color-text-muted)] mt-2">{trend}</div>
+        </div>
+        <div className={`p-3 rounded-xl ${bgClass} transition-transform group-hover:scale-110`}>{icon || <TagIcon size={24}/>}</div>
+      </div>
+    </NeonCard>
+  );
+}
+
+function SettingsRow({ icon, label, description }) {
+  return (
+    <div className="w-full flex items-center p-6 hover:bg-[var(--color-bg-card-hover)] transition-colors border-b border-[var(--color-border)] last:border-0 group">
+      <div className="p-3 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl text-[var(--color-text-muted)] group-hover:text-indigo-500 transition-colors ml-4">{icon || <Settings size={20}/>}</div>
+      <div>
+        <h3 className="text-lg text-[var(--color-text-main)] mb-1">{label}</h3>
+        <p className="text-sm text-[var(--color-text-muted)]">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function MobileNavItem({ icon, label, active, onClick }) {
+  return (
+    <button onClick={onClick} className={`flex flex-col items-center justify-center w-16 transition-colors ${active ? 'text-indigo-600' : 'text-[var(--color-text-muted)]'}`}>
+      <div className={`mb-1 ${active ? 'scale-110' : ''}`}>{icon || <Home size={22}/>}</div><span className="text-[10px]">{label}</span>
+    </button>
+  );
+}
+
+
+
+// ==========================================
+// PART 4: MAIN APP SHELL & STATE
+// ==========================================
+function MainApp() {
   const [activeTab, setActiveTab] = useState('overview');
   const [transactions, setTransactions] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [appSettings, setAppSettings] = useState({ scrape_duration: '1', month_start_date: '1' });
   const [selectedMonth, setSelectedMonth] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+  const [theme, setTheme] = useState('light');
+  
+  const [toast, setToast] = useState({ show: false, msg: '', type: 'info' });
+  const showToast = (msg, type = 'info') => {
+    setToast({ show: true, msg, type });
+    setTimeout(() => setToast({ show: false, msg: '', type: 'info' }), 4000);
+  };
 
   const [selectedTx, setSelectedTx] = useState(null);
+  const [selectedViewTx, setSelectedViewTx] = useState(null);
   const [editingAccount, setEditingAccount] = useState(null);
-  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [syncModalType, setSyncModalType] = useState(null);
+
+  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/data');
+      if (!res.ok) throw new Error('Network error');
       const data = await res.json();
+      
       const mappedTransactions = (data.transactions || []).map(tx => ({ ...tx, categoryId: tx.category || 'misc_uncategorized' }));
       setTransactions(mappedTransactions);
       setAccounts(data.accounts || []);
+      const settings = data.settings || { scrape_duration: '1', month_start_date: '1' };
+      setAppSettings(settings);
       
-      const months = new Set(mappedTransactions.map(tx => {
-        const parts = tx.date.split('/');
-        return parts.length === 3 ? `${parts[1]}/${parts[2]}` : null;
-      }).filter(Boolean));
-      
+      const monthStart = settings.month_start_date || '1';
+      const months = new Set(mappedTransactions.map(tx => getCustomMonthYear(tx.date, monthStart)).filter(Boolean));
       const available = Array.from(months).sort((a, b) => {
         const [mA, yA] = a.split('/'); const [mB, yB] = b.split('/');
-        return new Date(yB, mB) - new Date(yA, mA);
+        return new Date(yB, mB - 1) - new Date(yA, mA - 1);
       });
       if(available.length > 0 && !selectedMonth) setSelectedMonth(available[0]);
-    } catch (error) { console.error(error); }
+    } catch (error) { console.error("Fetch Data Error:", error); }
     setLoading(false);
   };
 
   useEffect(() => { fetchData(); }, []);
 
+  const handleSyncAll = async () => {
+    setIsSyncingAll(true); showToast('מתחיל סנכרון כללי...', 'info');
+    try { 
+      const res = await fetch('/api/sync-all', { method: 'POST' }); 
+      const data = await res.json();
+      if(data.success) { showToast('סנכרון הסתיים בהצלחה', 'success'); await fetchData(); }
+      else showToast(data.message || 'שגיאה בסנכרון', 'error');
+    } catch(e) { showToast('שגיאת תקשורת', 'error'); }
+    setIsSyncingAll(false);
+  };
+
+  const handleUpdateSetting = async (key, value) => {
+    try {
+      await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, value }) });
+      setAppSettings(prev => ({...prev, [key]: value}));
+    } catch(e) {}
+  };
+
   const availableMonths = useMemo(() => {
-    const months = new Set(transactions.map(tx => {
-      const parts = tx.date.split('/'); return parts.length === 3 ? `${parts[1]}/${parts[2]}` : null;
-    }).filter(Boolean));
+    const monthStart = appSettings.month_start_date || '1';
+    const months = new Set(transactions.map(tx => getCustomMonthYear(tx.date, monthStart)).filter(Boolean));
     return Array.from(months).sort((a, b) => {
-      const [mA, yA] = a.split('/'); const [mB, yB] = b.split('/'); return new Date(yB, mB) - new Date(yA, mA);
+      const [mA, yA] = a.split('/'); const [mB, yB] = b.split('/'); 
+      return new Date(yB, mB - 1) - new Date(yA, mA - 1);
     });
-  }, [transactions]);
+  }, [transactions, appSettings.month_start_date]);
 
   const filteredTransactions = useMemo(() => {
-    if (!selectedMonth) return transactions;
-    return transactions.filter(tx => tx.date.endsWith(selectedMonth));
-  }, [transactions, selectedMonth]);
+    if (!selectedMonth || selectedMonth === 'all') return transactions;
+    const monthStart = appSettings.month_start_date || '1';
+    return transactions.filter(tx => getCustomMonthYear(tx.date, monthStart) === selectedMonth);
+  }, [transactions, selectedMonth, appSettings.month_start_date]);
 
   const allExistingTags = useMemo(() => {
     const tagSet = new Set();
-    transactions.forEach(t => {
-      if (t.tags) t.tags.split(',').forEach(tag => { if (tag.trim()) tagSet.add(tag.trim()); });
-    });
+    transactions.forEach(t => { if (t.tags) t.tags.split(',').forEach(tag => { if (tag.trim()) tagSet.add(tag.trim()); }); });
     return Array.from(tagSet);
   }, [transactions]);
 
   const handleUpdateTransaction = async (txData) => {
-    try {
-      await fetch('/api/update-transaction', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(txData)
-      });
-      fetchData();
-    } catch (error) { console.error(error); }
-    setSelectedTx(null);
+    try { await fetch('/api/update-transaction', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(txData) }); fetchData(); } catch (error) {}
+    setSelectedTx(null); setSelectedViewTx(null);
   };
   
   const handleLinkTransactions = async (txId1, txId2) => {
-    try {
-      await fetch('/api/link-transactions', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ txId1, txId2 })
-      });
-      fetchData();
-    } catch (error) { console.error(error); }
+    try { await fetch('/api/link-transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ txId1, txId2 }) }); fetchData(); } catch (error) {}
   };
 
-  const handleEditAccountSubmit = async (accountId, newName, billingDate) => {
+  const handleDeleteAccount = async (accountId) => {
+    if(window.confirm('מחיקת חשבון תמחוק גם את כל התנועות שלו. להמשיך?')) {
+      try { await fetch(`/api/account/${accountId}`, { method: 'DELETE' }); fetchData(); showToast('חשבון נמחק', 'success'); } catch (e) { showToast('שגיאה במחיקה', 'error'); }
+    }
+  }
+
+  // התיקון: מעבירים את המזהה המלא לשרת, כדי שהוא ימצא את החברה הנכונה
+  const handleSyncAccount = async (accountId) => {
+    setIsSyncingAll(true); showToast('מסנכרן חשבון נבחר...', 'info');
     try {
-      await fetch('/api/update-account', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: accountId, name: newName, billingDate })
-      });
-      fetchData(); 
-    } catch (e) { console.error(e); }
+      const res = await fetch('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountId: accountId }) });
+      const data = await res.json();
+      if(data.success) { showToast('סונכרן בהצלחה!', 'success'); fetchData(); }
+      else { showToast('שגיאת התחברות. נדרש לעדכן פרטים.', 'error'); setSyncModalType('all'); }
+    } catch(e){ showToast('שגיאת תקשורת', 'error'); }
+    setIsSyncingAll(false);
+  }
+
+  const handleEditAccountSubmit = async (accountId, newName, billingDate, scrapeDuration) => {
+    try { await fetch('/api/update-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: accountId, name: newName, billingDate, scrapeDuration }) }); fetchData(); } catch (e) {}
     setEditingAccount(null);
   };
 
   const getAccountName = (accId) => accounts.find(a => a.id === accId)?.name || accId;
 
   const sharedProps = {
-    transactions, filteredTransactions, accounts, ALL_CATEGORIES, getCategoryDetails,
-    selectedMonth, setSelectedMonth, availableMonths, allExistingTags,
-    onTxClick: setSelectedTx, getAccountName, INCOMES, EXPENSES, handleLinkTransactions,
-    setEditingAccount, onAddClick: () => setIsSyncModalOpen(true)
+    transactions, filteredTransactions, accounts, getCategoryDetails, selectedMonth, setSelectedMonth, availableMonths, 
+    allExistingTags, appSettings, handleUpdateSetting, theme, toggleTheme, onTxClick: setSelectedTx, getAccountName, 
+    handleLinkTransactions, setEditingAccount, onAddClick: setSyncModalType, handleDeleteAccount, handleSyncAccount, getCustomMonthYear, onViewTxClick: setSelectedViewTx
   };
 
-  const renderView = () => {
-    if (loading) return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4"><RefreshCw size={40} className="text-blue-500 animate-spin" /><p className="text-gray-500 font-medium">טוען נתונים מהכספת...</p></div>
-    );
-    switch (activeTab) {
-      case 'overview': return <OverviewView {...sharedProps} />;
-      case 'transactions': return <TransactionsView {...sharedProps} />;
-      case 'reports': return <ReportsView {...sharedProps} />;
-      case 'accounts': return <AccountsView {...sharedProps} />;
-      case 'budget': return <BudgetView {...sharedProps} />;
-      case 'settings': return <SettingsView />;
-      default: return <OverviewView {...sharedProps} />;
-    }
-  };
+  const NAV_ITEMS = [
+    { id: 'overview', label: 'סקירה', icon: Home }, { id: 'transactions', label: 'תנועות', icon: ListOrdered },
+    { id: 'reports', label: 'דוחות', icon: PieChart }, { id: 'accounts', label: 'חשבונות', icon: CreditCard },
+    { id: 'settings', label: 'הגדרות', icon: Settings }
+  ];
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans text-gray-800" dir="rtl">
-      <aside className="w-64 bg-white border-l border-gray-200 flex flex-col shadow-sm shrink-0 z-10 hidden md:flex">
-        <div className="p-6 flex items-center gap-3 border-b border-gray-100">
-          <div className="bg-blue-600 p-2 rounded-lg text-white shadow-md shadow-blue-500/20"><Wallet size={24} /></div>
-          <span className="text-xl font-bold">כיס חכם</span>
-        </div>
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          <SidebarItem icon={<Home size={20} />} label="סקירה כללית" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
-          <SidebarItem icon={<ListOrdered size={20} />} label="תנועות" active={activeTab === 'transactions'} onClick={() => setActiveTab('transactions')} />
-          <SidebarItem icon={<FileText size={20} />} label="דוחות חודשיים" active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
-          <SidebarItem icon={<CreditCard size={20} />} label="חשבונות ואשראי" active={activeTab === 'accounts'} onClick={() => setActiveTab('accounts')} />
-          <SidebarItem icon={<PieChart size={20} />} label="תקציב ופילוח" active={activeTab === 'budget'} onClick={() => setActiveTab('budget')} />
-        </nav>
-        <div className="p-4 border-t border-gray-100">
-          <SidebarItem icon={<Settings size={20} />} label="הגדרות" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
-        </div>
-      </aside>
+    <>
+      <style dangerouslySetInnerHTML={{ __html: themeStyles }} />
+      <div dir="rtl" className={`min-h-screen text-[var(--color-text-main)] overflow-x-hidden flex flex-col md:flex-row transition-colors duration-500 ${theme === 'dark' ? 'dark-theme bg-[#020617]' : 'bg-slate-50'}`}>
+        
+        <div className="fixed top-0 right-0 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none transition-opacity"></div>
+        <div className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none transition-opacity"></div>
 
-      <main className="flex-1 flex flex-col min-w-0 relative h-screen overflow-hidden">
-        <header className="bg-white h-16 border-b border-gray-200 flex items-center justify-between px-4 md:px-8 shrink-0">
-          <div className="flex items-center gap-4">
-            <h1 className="text-lg md:text-xl font-semibold text-gray-800 hidden sm:block">
-              {activeTab === 'overview' && 'סקירה כללית'}
-              {activeTab === 'transactions' && 'כל התנועות'}
-              {activeTab === 'reports' && 'דוחות הכנסות והוצאות'}
-              {activeTab === 'accounts' && 'ניהול מקורות מידע'}
-              {activeTab === 'budget' && 'תקציב ופילוח'}
-              {activeTab === 'settings' && 'הגדרות מקומיות'}
-            </h1>
-            {['transactions', 'budget', 'overview', 'reports'].includes(activeTab) && availableMonths.length > 0 && (
-              <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
-                <Calendar size={16} className="text-gray-500" />
-                <select className="bg-transparent text-sm font-medium outline-none text-gray-700 cursor-pointer" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
-                  {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
+        <nav className="fixed bottom-4 md:bottom-auto md:top-1/2 md:-translate-y-1/2 left-4 md:left-auto md:right-8 right-4 z-40 hidden md:block">
+          <div className="bg-[var(--color-nav-bg)] backdrop-blur-2xl border border-[var(--color-border)] rounded-full p-2 md:p-3 flex md:flex-col gap-2 shadow-[0_4px_30px_rgba(0,0,0,0.1)] transition-colors">
+             {NAV_ITEMS.map(item => {
+               const Icon = item.icon;
+               const isActive = activeTab === item.id;
+               return (
+                 <button key={item.id} onClick={() => setActiveTab(item.id)} className={`relative p-3 md:p-4 rounded-full flex items-center justify-center transition-all duration-300 group ${isActive ? 'bg-indigo-600 text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-bg-input)]'}`}>
+                   <Icon size={24} strokeWidth={isActive ? 2 : 1.5} />
+                 </button>
+               );
+             })}
+          </div>
+        </nav>
+
+        <main className="flex-1 p-4 md:p-12 md:pr-40 pb-32 md:pb-12 min-h-screen relative z-10">
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4 bg-[var(--color-bg-card)] p-5 md:p-6 rounded-2xl md:rounded-3xl border border-[var(--color-border)] shadow-[var(--shadow-card)] backdrop-blur-xl">
+            <div><h1 className="text-3xl text-[var(--color-text-main)] font-medium">כיס חכם</h1></div>
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              {['transactions', 'overview', 'reports', 'budget'].includes(activeTab) && availableMonths.length > 0 && (
+                <div className="flex items-center gap-2 bg-[var(--color-bg-input)] px-4 py-2 rounded-xl border border-[var(--color-border)]">
+                  <Calendar size={18} className="text-indigo-500" />
+                  <select className="bg-transparent text-sm outline-none text-[var(--color-text-main)] cursor-pointer" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+                    <option value="all">הכל (כל הנתונים)</option>
+                    {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              )}
+              <button onClick={handleSyncAll} disabled={isSyncingAll} className="bg-[var(--color-bg-input)] border border-[var(--color-border)] hover:bg-[var(--color-bg-card-hover)] text-[var(--color-text-main)] p-2 rounded-xl flex items-center gap-2 transition-colors text-sm">
+                <RefreshCw size={16} className={isSyncingAll ? "animate-spin text-indigo-500" : ""} /><span className="hidden sm:inline">{isSyncingAll ? 'מסנכרן...' : 'רענן הכל'}</span>
+              </button>
+              <button onClick={() => setSyncModalType('all')} className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-xl flex items-center gap-2 transition-all text-sm">
+                <Plus size={16} /><span className="hidden sm:inline">הוסף מקור</span>
+              </button>
+            </div>
+          </header>
+
+          <div className="relative z-10">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-64 gap-4"><RefreshCw size={40} className="text-indigo-500 animate-spin" /><p className="text-[var(--color-text-muted)]">טוען נתונים...</p></div>
+            ) : (
+              <ErrorBoundary>
+                {activeTab === 'overview' && <OverviewView {...sharedProps} />}
+                {activeTab === 'transactions' && <TransactionsView {...sharedProps} />}
+                {activeTab === 'reports' && <ReportsView {...sharedProps} />}
+                {activeTab === 'accounts' && <AccountsView {...sharedProps} />}
+                {activeTab === 'budget' && <BudgetView {...sharedProps} />}
+                {activeTab === 'settings' && <SettingsView {...sharedProps} />}
+              </ErrorBoundary>
             )}
           </div>
-          <div className="flex items-center gap-4 md:gap-6">
-            <button onClick={() => setIsSyncModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white p-2 sm:px-4 sm:py-2 rounded-lg shadow-sm flex items-center gap-2 transition-colors text-sm font-medium">
-              <Plus size={18} /><span className="hidden sm:inline">הוסף מקור מידע</span>
-            </button>
-          </div>
-        </header>
+        </main>
 
-        <div className="flex-1 overflow-auto bg-gray-50/50 p-4 md:p-8">
-          <div className="max-w-7xl mx-auto pb-20 md:pb-10">
-            {renderView()}
+        {toast.show && (
+          <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-lg text-white flex items-center gap-2 animate-in slide-in-from-top-4 fade-in duration-300 ${toast.type === 'success' ? 'bg-emerald-500' : toast.type === 'error' ? 'bg-rose-500' : 'bg-blue-500'}`}>
+            {toast.type === 'success' && <CheckCircle2 size={18}/>}
+            {toast.type === 'error' && <AlertCircle size={18}/>}
+            {toast.type === 'info' && <RefreshCw size={18} className="animate-spin"/>}
+            <span className="text-sm font-medium">{toast.msg}</span>
           </div>
-        </div>
+        )}
 
-        <nav className="md:hidden absolute bottom-0 w-full bg-white border-t border-gray-200 px-4 py-2 pb-safe flex justify-between items-center z-20">
+        <nav className="md:hidden fixed bottom-0 w-full bg-[var(--color-nav-bg)] border-t border-[var(--color-border)] px-4 py-2 pb-safe flex justify-between items-center z-40 backdrop-blur-xl">
             <MobileNavItem icon={<Home size={22} />} label="ראשי" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
             <MobileNavItem icon={<ListOrdered size={22} />} label="תנועות" active={activeTab === 'transactions'} onClick={() => setActiveTab('transactions')} />
-            <MobileNavItem icon={<FileText size={22} />} label="דוחות" active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
+            <MobileNavItem icon={<PieChart size={22} />} label="דוחות" active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
             <MobileNavItem icon={<CreditCard size={22} />} label="חשבונות" active={activeTab === 'accounts'} onClick={() => setActiveTab('accounts')} />
         </nav>
 
-        {selectedTx && (
-          <TransactionModal 
-            tx={selectedTx} 
-            getCategoryDetails={getCategoryDetails}
-            accounts={accounts} transactions={transactions}
-            allExistingTags={allExistingTags}
-            INCOMES={INCOMES} EXPENSES={EXPENSES}
-            onClose={() => setSelectedTx(null)}
-            onSave={handleUpdateTransaction}
-            onLink={handleLinkTransactions}
-            onTxClick={setSelectedTx}
-          />
-        )}
-
-        {editingAccount && (
-          <EditAccountModal account={editingAccount} onClose={() => setEditingAccount(null)} onSave={handleEditAccountSubmit} />
-        )}
-
-        {isSyncModalOpen && (
-          <SyncModal onClose={() => setIsSyncModalOpen(false)} onSuccess={() => { setIsSyncModalOpen(false); fetchData(); }} />
-        )}
-      </main>
-    </div>
+        {selectedTx && <TransactionModal tx={selectedTx} {...sharedProps} onClose={() => setSelectedTx(null)} onSave={handleUpdateTransaction} onLink={handleLinkTransactions} />}
+        {selectedViewTx && <TransactionViewModal tx={selectedViewTx} {...sharedProps} onClose={() => setSelectedViewTx(null)} onEdit={(t) => {setSelectedViewTx(null); setSelectedTx(t);}} />}
+        {editingAccount && <EditAccountModal account={editingAccount} onClose={() => setEditingAccount(null)} onSave={handleEditAccountSubmit} />}
+        {syncModalType && <SyncModal type={syncModalType} scrapeDuration={appSettings.scrape_duration} onClose={() => setSyncModalType(null)} onSuccess={() => { setSyncModalType(null); fetchData(); }} />}
+      </div>
+    </>
   );
 }
 
 // ==========================================
-// Views
+// PART 7: OVERVIEW VIEW
 // ==========================================
-
 function OverviewView({ filteredTransactions, accounts, onTxClick, getCategoryDetails, getAccountName, transactions }) {
-  const totalBalance = accounts.filter(a => a.type === 'bank').reduce((sum, a) => sum + Math.max(0, a.balance), 0);
-  const monthIncome = filteredTransactions.reduce((sum, t) => {
-    const { mainCat } = getCategoryDetails(t.categoryId); return (mainCat.type === 'income' || t.amount > 0) ? sum + t.amount : sum;
-  }, 0);
-  const monthExpenses = filteredTransactions.reduce((sum, t) => {
-    const { mainCat } = getCategoryDetails(t.categoryId); return (mainCat.type !== 'income' && t.amount < 0) ? sum + t.amount : sum;
-  }, 0);
+  const totalBalance = accounts.filter(a => a.type === 'bank').reduce((sum, a) => sum + Math.max(0, a.balance || 0), 0);
+  const monthIncome = filteredTransactions.reduce((sum, t) => { const { mainCat } = getCategoryDetails(t.categoryId); return (mainCat.type === 'income' || t.amount > 0) ? sum + (t.amount||0) : sum; }, 0);
+  const monthExpenses = filteredTransactions.reduce((sum, t) => { const { mainCat } = getCategoryDetails(t.categoryId); return (mainCat.type !== 'income' && t.amount < 0) ? sum + (t.amount||0) : sum; }, 0);
+  const monthlyBalance = monthIncome - Math.abs(monthExpenses);
 
   const banks = accounts.filter(a => a.type === 'bank');
   const credits = accounts.filter(a => a.type === 'credit');
@@ -347,123 +406,245 @@ function OverviewView({ filteredTransactions, accounts, onTxClick, getCategoryDe
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard title="יתרת עו״ש כוללת" amount={`₪ ${totalBalance.toLocaleString(undefined, {minimumFractionDigits:2})}`} trend="סה״כ בכל הבנקים" isPositive={totalBalance >= 0} icon={<Building size={24} className="text-blue-600" />} color="blue" />
-        <StatCard title="הוצאות החודש" amount={`₪ ${monthExpenses.toLocaleString(undefined, {minimumFractionDigits:2})}`} trend="סיכום כרטיסים ועו״ש" isPositive={false} icon={<TrendingDown size={24} className="text-red-600" />} color="red" />
-        <StatCard title="הכנסות החודש" amount={`₪ ${monthIncome.toLocaleString(undefined, {minimumFractionDigits:2})}`} trend="משכורות והעברות" isPositive={monthIncome >= 0} icon={<TrendingUp size={24} className="text-green-600" />} color="green" />
+        <StatCard title="יתרת עו״ש" amount={`₪${(totalBalance||0).toLocaleString(undefined, {minimumFractionDigits:0})}`} trend="סה״כ בכל הבנקים" icon={<Building size={24} className="text-blue-600" />} color="blue" />
+        <StatCard title="הכנסות החודש" amount={`₪${(monthIncome||0).toLocaleString(undefined, {minimumFractionDigits:0})}`} trend="סיכום כל ההכנסות" icon={<TrendingUp size={24} className="text-emerald-600" />} color="green" />
+        <StatCard title="הוצאות החודש" amount={`₪${(Math.abs(monthExpenses)||0).toLocaleString(undefined, {minimumFractionDigits:0})}`} trend="סיכום כרטיסים ועו״ש" icon={<TrendingDown size={24} className="text-rose-600" />} color="red" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center"><h2 className="text-lg font-bold">תנועות אחרונות</h2></div>
+        <div className="lg:col-span-2 space-y-4">
+          <NeonCard noPadding>
+            <div className="p-4 border-b border-[var(--color-border)]"><h2 className="text-lg text-[var(--color-text-main)]">תנועות אחרונות</h2></div>
             <div className="overflow-x-auto">
-              <table className="w-full text-right">
-                <thead className="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
-                  <tr><th className="px-4 py-2 font-semibold">תאריך</th><th className="px-4 py-2 font-semibold">תיאור וקטגוריה</th><th className="px-4 py-2 font-semibold">חשבון מחיוב</th><th className="px-4 py-2 font-semibold">סכום</th></tr>
+              <table className="w-full text-right border-collapse">
+                <thead>
+                  <tr className="bg-[var(--color-bg-input)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] text-sm">
+                    <th className="p-3 font-normal">תאריך</th>
+                    <th className="p-3 font-normal text-center">סמל</th>
+                    <th className="p-3 font-normal">שם העסק</th>
+                    <th className="p-3 font-normal">קטגוריה</th>
+                    <th className="p-3 font-normal">חשבון מחיוב</th>
+                    <th className="p-3 font-normal text-center">סכום</th>
+                  </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {filteredTransactions.slice(0, 5).map((tx) => {
+                <tbody className="divide-y divide-[var(--color-border)]">
+                  {filteredTransactions.slice(0, 6).map((tx) => {
                     const { mainCat, subCat } = getCategoryDetails(tx.categoryId);
-                    const Icon = IconMap[mainCat.icon] || TagIcon;
-                    const amountColor = mainCat.type === 'income' || tx.amount > 0 ? 'text-green-600' : 'text-gray-900';
+                    const Icon = subCat?.icon || mainCat?.icon || TagIcon;
+                    const isIncome = mainCat.type === 'income' || tx.amount > 0;
                     return (
-                      <tr key={tx.id} onClick={() => onTxClick(tx)} className="hover:bg-blue-50/30 transition-colors cursor-pointer group">
-                        <td className="px-4 py-2.5 text-xs text-gray-500 w-24 whitespace-nowrap">{tx.date}</td>
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-full ${mainCat.bg} ${mainCat.color} shrink-0`}><Icon size={14} /></div>
-                            <div className="flex flex-col">
-                              <span className="text-sm font-bold text-gray-800 leading-tight flex items-center gap-2">
-                                {tx.description}
-                                {tx.linkedTransactionId && <LinkIcon size={12} className="text-blue-500"/>}
-                                {tx.status === 'pending' && <span className="bg-orange-100 text-orange-700 text-[10px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1"><Clock size={10}/> ממתין</span>}
-                              </span>
-                              <span className="text-[11px] text-gray-500 mt-0.5">{mainCat.type === 'income' ? mainCat.name : `${mainCat.name} • ${subCat.name}`}</span>
-                            </div>
+                      <tr key={tx.id} onClick={() => onTxClick(tx)} className="hover:bg-[var(--color-bg-card-hover)] transition-colors cursor-pointer text-sm text-[var(--color-text-main)]">
+                        <td className="p-3 text-[var(--color-text-muted)] whitespace-nowrap">{tx.date}</td>
+                        <td className="p-3 text-center"><div className={`w-8 h-8 rounded-lg inline-flex items-center justify-center ${mainCat.bg} ${mainCat.color}`}><Icon size={16} /></div></td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            {tx.description}
+                            {tx.linkedTransactionId && <LinkIcon size={12} className="text-indigo-500"/>}
+                            {tx.installments && <span className="bg-indigo-500/10 text-indigo-500 text-[10px] px-1.5 py-0.5 rounded">תשלום {tx.installments.number}/{tx.installments.total}</span>}
+                            {tx.status === 'pending' && <span className="bg-orange-500/10 text-orange-500 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1"><Clock size={10}/> ממתין</span>}
                           </div>
                         </td>
-                        <td className="px-4 py-2.5 text-xs text-gray-500">{getAccountName(tx.accountId || tx.account)}</td>
-                        <td className={`px-4 py-2.5 text-sm font-bold ${amountColor} text-left whitespace-nowrap`} dir="ltr">{tx.amount > 0 ? '+' : ''}{tx.amount.toFixed(2)} ₪</td>
+                        <td className="p-3 text-[var(--color-text-muted)]">{mainCat.type === 'income' ? mainCat.name : `${mainCat.name} • ${subCat?.name}`}</td>
+                        <td className="p-3 text-[var(--color-text-muted)]">{getAccountName(tx.accountId || tx.account)}</td>
+                        <td className={`p-3 text-center ${isIncome ? 'text-emerald-500' : ''}`} dir="ltr">{isIncome ? '+' : ''}{(tx.amount||0).toFixed(2)} ₪</td>
                       </tr>
                     );
                   })}
-                  {filteredTransactions.length === 0 && <tr><td colSpan="4" className="text-center py-8 text-gray-500">אין תנועות בחודש זה</td></tr>}
+                  {filteredTransactions.length === 0 && <tr><td colSpan="6" className="text-center py-8 text-[var(--color-text-muted)]">אין תנועות בחודש זה</td></tr>}
                 </tbody>
               </table>
             </div>
-          </div>
+          </NeonCard>
         </div>
-
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-             <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><CreditCard size={20} className="text-purple-600" /> כרטיסי אשראי</h2>
+           <NeonCard>
+             <h2 className="text-lg mb-2 text-[var(--color-text-main)] flex items-center gap-2"><PieChart size={20} className="text-indigo-500"/> מאזן החודש</h2>
+             <div dir="ltr" className={`text-4xl font-medium text-right ${monthlyBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+               {monthlyBalance > 0 ? '+' : ''}{monthlyBalance.toLocaleString()} ₪
+             </div>
+           </NeonCard>
+
+           <NeonCard>
+             <h2 className="text-lg mb-4 text-[var(--color-text-main)] flex items-center gap-2"><CreditCard size={20} className="text-rose-500"/> אשראי: חיוב קרוב</h2>
              <div className="space-y-3">
-               {credits.length === 0 ? <p className="text-sm text-gray-500">אין כרטיסים מקושרים</p> : credits.map(acc => {
+               {credits.length === 0 ? <p className="text-sm text-[var(--color-text-muted)]">אין כרטיסים</p> : 
+                credits.map(acc => {
                  const upcoming = calculateUpcomingCharge(acc, transactions);
                  return (
-                 <div key={acc.id} className="p-4 border border-gray-100 rounded-xl bg-purple-50/20 hover:border-purple-200 transition-colors">
-                   <div className="flex justify-between items-start mb-2"><h3 className="font-semibold text-gray-800">{acc.name}</h3></div>
-                   <div className="flex justify-between items-end">
-                     <span className="text-xs text-gray-500">חיוב קרוב:</span>
-                     <span className="font-bold text-red-600" dir="ltr">{upcoming.toLocaleString('he-IL', { style: 'currency', currency: 'ILS' })}</span>
-                   </div>
+                 <div key={acc.id} className="flex justify-between items-center p-3 bg-[var(--color-bg-input)] rounded-xl border border-[var(--color-border)]">
+                   <span className="text-[var(--color-text-main)] text-sm">{acc.name}</span>
+                   <span className="text-rose-500 text-sm" dir="ltr">{(upcoming||0).toLocaleString(undefined, {minimumFractionDigits: 0})} ₪</span>
                  </div>
                )})}
              </div>
-          </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-             <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Building size={20} className="text-blue-600" /> חשבונות בנק</h2>
+           </NeonCard>
+           
+           <NeonCard>
+             <h2 className="text-lg mb-4 text-[var(--color-text-main)] flex items-center gap-2"><Building size={20} className="text-blue-500"/> בנקים: יתרה</h2>
              <div className="space-y-3">
-               {banks.length === 0 ? <p className="text-sm text-gray-500">אין בנקים מקושרים</p> : banks.map(acc => (
-                 <div key={acc.id} className="p-4 border border-gray-100 rounded-xl bg-blue-50/20 hover:border-blue-200 transition-colors">
-                   <div className="flex justify-between items-start mb-2"><h3 className="font-semibold text-gray-800">{acc.name}</h3></div>
-                   <div className="flex justify-between items-end">
-                     <span className="text-xs text-gray-500">יתרה נוכחית:</span>
-                     <span className={`font-bold ${acc.balance < 0 ? 'text-red-600' : 'text-green-600'}`} dir="ltr">{acc.balance.toLocaleString('he-IL', { style: 'currency', currency: 'ILS' })}</span>
-                   </div>
+               {banks.length === 0 ? <p className="text-sm text-[var(--color-text-muted)]">אין בנקים</p> : 
+                banks.map(acc => (
+                 <div key={acc.id} className="flex justify-between items-center p-3 bg-[var(--color-bg-input)] rounded-xl border border-[var(--color-border)]">
+                   <span className="text-[var(--color-text-main)] text-sm">{acc.name}</span>
+                   <span className={`text-sm ${(acc.balance||0) < 0 ? 'text-rose-500' : 'text-emerald-500'}`} dir="ltr">{(acc.balance||0).toLocaleString(undefined, {minimumFractionDigits: 0})} ₪</span>
                  </div>
                ))}
              </div>
-          </div>
+           </NeonCard>
         </div>
       </div>
     </div>
   );
 }
 
-// --- דוחות חודשיים - משודרג! (הוצאות בימין, קידוח נתונים) ---
-function ReportsView({ filteredTransactions, getCategoryDetails, onTxClick, getAccountName }) {
+// ==========================================
+// PART 8: TRANSACTIONS & REPORTS VIEWS
+// ==========================================
+function TransactionsView({ filteredTransactions, onTxClick, getCategoryDetails, getAccountName, appSettings, getCustomMonthYear }) {
+  const [filterType, setFilterType] = useState('all'); 
+  const displayedTxs = useMemo(() => {
+    let txs = filteredTransactions;
+    if (filterType !== 'all') {
+      txs = filteredTransactions.filter(t => {
+        const { mainCat } = getCategoryDetails(t.categoryId); return mainCat.type === filterType;
+      });
+    }
+    return txs.sort((a,b) => {
+       const da = a.date.split('/').reverse().join('');
+       const db = b.date.split('/').reverse().join('');
+       return db.localeCompare(da);
+    });
+  }, [filteredTransactions, filterType, getCategoryDetails]);
+
+  const renderGroupedRows = () => {
+    const rows = [];
+    let currentMonth = null;
+    let currentDay = null;
+
+    const today = new Date();
+    const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+    const currentAppMonth = getCustomMonthYear(todayStr, appSettings.month_start_date || '1');
+
+    displayedTxs.forEach(tx => {
+      const txMonth = getCustomMonthYear(tx.date, appSettings.month_start_date || '1');
+      const txDay = tx.date;
+
+      if (txMonth !== currentMonth) {
+        if (txMonth !== currentAppMonth) {
+          rows.push(
+            <tr key={`month-${txMonth}`} className="bg-[var(--color-bg-main)] border-b border-[var(--color-border)]">
+              <td colSpan="6" className="px-4 py-2 text-sm font-medium text-[var(--color-text-main)] bg-indigo-500/5 text-center">{txMonth}</td>
+            </tr>
+          );
+        }
+        currentMonth = txMonth;
+        currentDay = null;
+      }
+
+      if (txDay !== currentDay) {
+        rows.push(
+          <tr key={`day-${txDay}`} className="bg-[var(--color-bg-input)] border-b border-[var(--color-border)]">
+            <td colSpan="6" className="px-4 py-1 text-xs text-[var(--color-text-muted)]">{txDay}</td>
+          </tr>
+        );
+        currentDay = txDay;
+      }
+
+      const { mainCat, subCat } = getCategoryDetails(tx.categoryId);
+      const Icon = subCat?.icon || mainCat?.icon || TagIcon;
+      const isIncome = mainCat.type === 'income' || tx.amount > 0;
+
+      rows.push(
+        <tr key={tx.id} onClick={() => onTxClick(tx)} className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-card-hover)] transition-colors cursor-pointer text-[var(--color-text-main)]">
+          <td className="p-4 text-sm text-[var(--color-text-muted)] whitespace-nowrap">{tx.date}</td>
+          <td className="p-4 text-center">
+            <div className={`w-8 h-8 rounded-lg inline-flex items-center justify-center ${mainCat.bg} ${mainCat.color}`}><Icon size={16} /></div>
+          </td>
+          <td className="p-4">
+            <div className="flex items-center gap-2">
+              {tx.description}
+              {tx.installments && <span className="bg-indigo-500/10 text-indigo-500 text-[10px] px-1.5 py-0.5 rounded">תשלום {tx.installments.number}/{tx.installments.total}</span>}
+              {tx.status === 'pending' && <span className="bg-orange-500/10 text-orange-500 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1"><Clock size={10}/> ממתין</span>}
+              {tx.linkedTransactionId && <LinkIcon size={12} className="text-indigo-500"/>}
+            </div>
+            {(tx.tags || tx.notes) && (
+              <div className="flex gap-2 mt-1">
+                 {tx.tags && tx.tags.split(',').filter(t=>t.trim()).map(tag => <span key={tag} className="text-[10px] bg-[var(--color-bg-input)] border border-[var(--color-border)] text-[var(--color-text-muted)] px-1.5 py-0.5 rounded">{tag.trim()}</span>)}
+                 {tx.notes && <span className="text-[10px] bg-[var(--color-bg-input)] border border-[var(--color-border)] text-[var(--color-text-muted)] px-1.5 py-0.5 rounded flex items-center gap-1"><AlignLeft size={10}/> הערה</span>}
+              </div>
+            )}
+          </td>
+          <td className="p-4 text-sm text-[var(--color-text-muted)]">{mainCat.type === 'income' ? mainCat.name : `${mainCat.name} • ${subCat?.name}`}</td>
+          <td className="p-4 text-sm text-[var(--color-text-muted)]">{getAccountName(tx.accountId || tx.account)}</td>
+          <td className={`p-4 text-center ${isIncome ? 'text-emerald-500' : ''}`} dir="ltr">{isIncome ? '+' : ''}{(tx.amount||0).toFixed(2)} ₪</td>
+        </tr>
+      );
+    });
+
+    if (rows.length === 0) return <tr><td colSpan="6" className="text-center py-12 text-[var(--color-text-muted)] text-lg">לא נמצאו תנועות</td></tr>;
+    return rows;
+  };
+
+  return (
+    <div className="animate-in fade-in duration-500 space-y-6">
+      <div className="flex gap-2 w-full overflow-x-auto pb-2 hide-scrollbar">
+        <button onClick={() => setFilterType('all')} className={`px-5 py-1.5 rounded-xl text-sm transition-colors border ${filterType === 'all' ? 'bg-[var(--color-text-main)] text-[var(--color-bg-main)] border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הכל</button>
+        <button onClick={() => setFilterType('expense')} className={`px-5 py-1.5 rounded-xl text-sm transition-colors border ${filterType === 'expense' ? 'bg-[var(--color-text-main)] text-[var(--color-bg-main)] border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הוצאות בלבד</button>
+        <button onClick={() => setFilterType('income')} className={`px-5 py-1.5 rounded-xl text-sm transition-colors border ${filterType === 'income' ? 'bg-emerald-600 text-white border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הכנסות בלבד</button>
+      </div>
+
+      <NeonCard noPadding>
+        <div className="overflow-x-auto">
+          <table className="w-full text-right border-collapse min-w-[800px]">
+            <thead>
+              <tr className="bg-[var(--color-bg-input)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] text-sm">
+                <th className="p-4 font-normal w-24">תאריך</th>
+                <th className="p-4 font-normal text-center w-12">סמל</th>
+                <th className="p-4 font-normal">שם העסק</th>
+                <th className="p-4 font-normal">קטגוריה</th>
+                <th className="p-4 font-normal">חשבון מחיוב</th>
+                <th className="p-4 font-normal text-center">סכום</th>
+              </tr>
+            </thead>
+            <tbody>
+              {renderGroupedRows()}
+            </tbody>
+          </table>
+        </div>
+      </NeonCard>
+    </div>
+  );
+}
+
+function ReportsView({ filteredTransactions, getCategoryDetails, onViewTxClick, getAccountName }) {
   const [expandedMainCat, setExpandedMainCat] = useState(null);
-  const [viewingSubCatTxs, setViewingSubCatTxs] = useState(null); // מכיל את אובייקט התת-קטגוריה והתנועות שלו
+  const [viewingSubCatTxs, setViewingSubCatTxs] = useState(null); 
 
   const incomes = filteredTransactions.filter(t => { const { mainCat } = getCategoryDetails(t.categoryId); return mainCat.type === 'income' || t.amount > 0; });
   const expenses = filteredTransactions.filter(t => { const { mainCat } = getCategoryDetails(t.categoryId); return mainCat.type !== 'income' && t.amount < 0; });
 
-  const totalIncome = incomes.reduce((sum, t) => sum + t.amount, 0);
-  const totalExpense = expenses.reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = incomes.reduce((sum, t) => sum + (t.amount || 0), 0);
+  const totalExpense = expenses.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
 
-  // קיבוץ הוצאות לענפים ראשיים -> ותתי ענפים
   const groupedExpenses = useMemo(() => {
     const grouped = {};
     expenses.forEach(t => {
       const { mainCat, subCat } = getCategoryDetails(t.categoryId);
       if (!grouped[mainCat.id]) grouped[mainCat.id] = { mainCat, amount: 0, subs: {} };
-      grouped[mainCat.id].amount += t.amount;
-      
+      grouped[mainCat.id].amount += (t.amount || 0);
       if(!grouped[mainCat.id].subs[subCat.id]) grouped[mainCat.id].subs[subCat.id] = { subCat, amount: 0, txs: [] };
-      grouped[mainCat.id].subs[subCat.id].amount += t.amount;
+      grouped[mainCat.id].subs[subCat.id].amount += (t.amount || 0);
       grouped[mainCat.id].subs[subCat.id].txs.push(t);
     });
     return Object.values(grouped).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
   }, [expenses, getCategoryDetails]);
 
-  // קיבוץ הכנסות (שטוח)
   const groupedIncomes = useMemo(() => {
     const grouped = {};
     incomes.forEach(t => {
       const { mainCat } = getCategoryDetails(t.categoryId);
       if (!grouped[mainCat.id]) grouped[mainCat.id] = { mainCat, amount: 0, txs: [] };
-      grouped[mainCat.id].amount += t.amount;
+      grouped[mainCat.id].amount += (t.amount || 0);
       grouped[mainCat.id].txs.push(t);
     });
     return Object.values(grouped).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
@@ -472,29 +653,27 @@ function ReportsView({ filteredTransactions, getCategoryDetails, onTxClick, getA
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       
-      {/* חלון תנועות לתת-קטגוריה (לקריאה בלבד + עריכה) */}
       {viewingSubCatTxs && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-md" onClick={() => setViewingSubCatTxs(null)}></div>
+          <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[2rem] w-full max-w-2xl shadow-2xl flex flex-col max-h-[80vh] animate-in zoom-in-95">
+            <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-bg-input)] rounded-t-[2rem]">
               <div>
-                <h3 className="text-xl font-bold text-gray-800">{viewingSubCatTxs.title}</h3>
-                <p className="text-sm text-gray-500 font-medium">סה״כ: <span dir="ltr">{viewingSubCatTxs.amount.toLocaleString(undefined, {minimumFractionDigits:2})} ₪</span></p>
+                <h3 className="text-xl text-[var(--color-text-main)]">{viewingSubCatTxs.title}</h3>
+                <p className="text-sm text-[var(--color-text-muted)]">סה״כ: <span dir="ltr">{(Math.abs(viewingSubCatTxs.amount)||0).toLocaleString(undefined, {minimumFractionDigits:2})} ₪</span></p>
               </div>
-              <button onClick={() => setViewingSubCatTxs(null)} className="p-2 bg-white rounded-full text-gray-400 hover:text-gray-800 shadow-sm border border-gray-200"><X size={20} /></button>
+              <button onClick={() => setViewingSubCatTxs(null)} className="p-2 bg-[var(--color-bg-card)] rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] border border-[var(--color-border)]"><X size={20} /></button>
             </div>
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
               {viewingSubCatTxs.txs.map(tx => (
-                <div key={tx.id} className="flex justify-between items-center p-4 border-b border-gray-50 hover:bg-gray-50 rounded-xl transition-colors">
+                <div key={tx.id} onClick={() => { setViewingSubCatTxs(null); onViewTxClick(tx); }} className="flex justify-between items-center p-4 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl hover:border-indigo-500/50 transition-colors cursor-pointer group">
                   <div className="flex flex-col">
-                    <span className="font-bold text-gray-800">{tx.description}</span>
-                    <span className="text-xs text-gray-500">{tx.date} • {getAccountName(tx.account || tx.accountId)}</span>
+                    <span className="text-[var(--color-text-main)]">{tx.description}</span>
+                    <span className="text-xs text-[var(--color-text-muted)] mt-1">{tx.date} • {getAccountName(tx.account || tx.accountId)}</span>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-gray-900'}`} dir="ltr">{tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString(undefined, {minimumFractionDigits:2})} ₪</span>
-                    <button onClick={() => { setViewingSubCatTxs(null); onTxClick(tx); }} className="p-2 text-blue-500 hover:bg-blue-100 rounded-lg transition-colors" title="ערוך תנועה">
-                      <Edit2 size={16} />
-                    </button>
+                    <span className={`text-lg ${tx.amount > 0 ? 'text-emerald-500' : 'text-[var(--color-text-main)]'}`} dir="ltr">{tx.amount > 0 ? '+' : ''}{(tx.amount||0).toFixed(2)} ₪</span>
+                    <ChevronLeft size={16} className="text-[var(--color-text-muted)] group-hover:text-indigo-500" />
                   </div>
                 </div>
               ))}
@@ -503,166 +682,123 @@ function ReportsView({ filteredTransactions, getCategoryDetails, onTxClick, getA
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
-        {/* עמודת הוצאות (ימין - סדר 1) */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden order-1">
-          <div className="bg-red-50 p-6 border-b border-red-100 text-center">
-            <h2 className="text-lg font-bold text-red-800 mb-2">סה״כ הוצאות</h2>
-            <p className="text-4xl font-black text-red-600" dir="ltr">{totalExpense.toLocaleString(undefined, {minimumFractionDigits:2})} ₪</p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <NeonCard noPadding className="order-1">
+          <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-bg-input)]">
+            <h2 className="text-lg text-[var(--color-text-muted)] mb-1">סה״כ הוצאות</h2>
+            <p className="text-4xl text-rose-500" dir="ltr">{(totalExpense||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</p>
           </div>
-          <div className="divide-y divide-gray-50">
-            {groupedExpenses.length === 0 ? <p className="text-center text-gray-400 py-6">אין הוצאות</p> : groupedExpenses.map(item => {
-              const Icon = IconMap[item.mainCat.icon] || TagIcon;
+          <div className="divide-y divide-[var(--color-border)]">
+            {groupedExpenses.length === 0 ? <p className="text-center text-[var(--color-text-muted)] py-8">אין הוצאות</p> : groupedExpenses.map(item => {
+              const Icon = item.mainCat.icon || TagIcon;
               const isExpanded = expandedMainCat === item.mainCat.id;
               return (
                 <div key={item.mainCat.id}>
-                  <button onClick={() => setExpandedMainCat(isExpanded ? null : item.mainCat.id)} className="w-full flex justify-between items-center py-4 px-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl ${item.mainCat.bg} ${item.mainCat.color}`}><Icon size={20} /></div>
-                      <span className="font-bold text-gray-800">{item.mainCat.name}</span>
-                    </div>
+                  <button onClick={() => setExpandedMainCat(isExpanded ? null : item.mainCat.id)} className="w-full flex justify-between items-center p-5 hover:bg-[var(--color-bg-card-hover)] transition-colors group">
                     <div className="flex items-center gap-4">
-                      <span className="font-bold text-gray-900" dir="ltr">{item.amount.toLocaleString(undefined, {minimumFractionDigits:2})} ₪</span>
-                      {isExpanded ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.mainCat.bg} transition-all`}><Icon size={18} className={item.mainCat.color} strokeWidth={1.5}/></div>
+                      <span className="text-lg text-[var(--color-text-main)]">{item.mainCat.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg text-[var(--color-text-main)]" dir="ltr">{(Math.abs(item.amount)||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span>
+                      <ChevronDown size={18} className={`text-[var(--color-text-muted)] transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
                     </div>
                   </button>
-                  {isExpanded && (
-                    <div className="bg-gray-50/50 flex flex-col border-t border-gray-50 inner-shadow">
-                      {Object.values(item.subs).sort((a,b) => Math.abs(b.amount) - Math.abs(a.amount)).map(sub => (
-                        <button key={sub.subCat.id} onClick={() => setViewingSubCatTxs({ title: `${item.mainCat.name} • ${sub.subCat.name}`, amount: sub.amount, txs: sub.txs })} className="flex justify-between items-center py-3 px-6 hover:bg-blue-50 transition-colors group">
-                          <span className="text-sm font-bold text-gray-600 group-hover:text-blue-600 flex items-center gap-2"><ChevronLeft size={14} className="opacity-0 group-hover:opacity-100 transition-opacity"/> {sub.subCat.name}</span>
-                          <span className="text-sm font-bold text-gray-700" dir="ltr">{sub.amount.toLocaleString(undefined, {minimumFractionDigits:2})} ₪</span>
+                  <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[1000px]' : 'max-h-0'}`}>
+                    <div className="p-2 bg-[var(--color-bg-input)] border-t border-[var(--color-border)]">
+                      {Object.values(item.subs).sort((a,b) => Math.abs(b.amount) - Math.abs(a.amount)).map(sub => {
+                        const SubIcon = sub.subCat.icon || TagIcon;
+                        return (
+                        <button key={sub.subCat.id} onClick={() => setViewingSubCatTxs({ title: `${item.mainCat.name} • ${sub.subCat.name}`, amount: sub.amount, txs: sub.txs })} className="w-full flex justify-between items-center p-3 rounded-lg hover:bg-[var(--color-bg-card)] transition-all group">
+                          <div className="flex items-center gap-3 text-[var(--color-text-main)]">
+                             <SubIcon size={16} className="text-[var(--color-text-muted)]" />
+                             <span className="text-sm">{sub.subCat.name}</span>
+                          </div>
+                          <span className="text-sm text-[var(--color-text-main)]" dir="ltr">{(Math.abs(sub.amount)||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span>
                         </button>
-                      ))}
+                      )})}
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })}
           </div>
-        </div>
+        </NeonCard>
 
-        {/* עמודת הכנסות (שמאל - סדר 2) */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden order-2">
-          <div className="bg-green-50 p-6 border-b border-green-100 text-center">
-            <h2 className="text-lg font-bold text-green-800 mb-2">סה״כ הכנסות</h2>
-            <p className="text-4xl font-black text-green-600" dir="ltr">{totalIncome > 0 ? '+' : ''}{totalIncome.toLocaleString(undefined, {minimumFractionDigits:2})} ₪</p>
+        <NeonCard noPadding className="order-2">
+          <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-bg-input)]">
+            <h2 className="text-lg text-[var(--color-text-muted)] mb-1">סה״כ הכנסות</h2>
+            <p className="text-4xl text-emerald-500" dir="ltr">{totalIncome > 0 ? '+' : ''}{(totalIncome||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</p>
           </div>
-          <div className="divide-y divide-gray-50">
-            {groupedIncomes.length === 0 ? <p className="text-center text-gray-400 py-6">אין הכנסות</p> : groupedIncomes.map(item => {
-              const Icon = IconMap[item.mainCat.icon] || TagIcon;
+          <div className="divide-y divide-[var(--color-border)]">
+            {groupedIncomes.length === 0 ? <p className="text-center text-[var(--color-text-muted)] py-8">אין הכנסות</p> : groupedIncomes.map(item => {
+              const Icon = item.mainCat.icon || TagIcon;
               return (
-                <button key={item.mainCat.id} onClick={() => setViewingSubCatTxs({ title: item.mainCat.name, amount: item.amount, txs: item.txs })} className="w-full flex justify-between items-center py-4 px-4 hover:bg-green-50 transition-colors group">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-xl ${item.mainCat.bg} ${item.mainCat.color}`}><Icon size={20} /></div>
-                    <span className="font-bold text-gray-800 group-hover:text-green-700 flex items-center gap-2">{item.mainCat.name} <ChevronLeft size={14} className="opacity-0 group-hover:opacity-100 transition-opacity"/></span>
+                <button key={item.mainCat.id} onClick={() => setViewingSubCatTxs({ title: item.mainCat.name, amount: item.amount, txs: item.txs })} className="w-full flex justify-between items-center p-5 hover:bg-[var(--color-bg-card-hover)] transition-colors group">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.mainCat.bg} transition-all`}><Icon size={18} className={item.mainCat.color} strokeWidth={1.5} /></div>
+                    <span className="text-lg text-[var(--color-text-main)]">{item.mainCat.name}</span>
                   </div>
-                  <span className="font-bold text-green-600" dir="ltr">+{item.amount.toLocaleString(undefined, {minimumFractionDigits:2})} ₪</span>
+                  <span className="text-emerald-500 text-lg" dir="ltr">+{(item.amount||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span>
                 </button>
               );
             })}
           </div>
-        </div>
-
+        </NeonCard>
       </div>
     </div>
   );
 }
 
-function TransactionsView({ filteredTransactions, onTxClick, getCategoryDetails, getAccountName }) {
-  const [filterType, setFilterType] = useState('all'); 
-  const displayedTxs = useMemo(() => {
-    if (filterType === 'all') return filteredTransactions;
-    return filteredTransactions.filter(t => {
-      const { mainCat } = getCategoryDetails(t.categoryId); return mainCat.type === filterType;
-    });
-  }, [filteredTransactions, filterType, getCategoryDetails]);
-
-  return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in duration-500">
-      <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50/30">
-        <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 hide-scrollbar">
-          <button onClick={() => setFilterType('all')} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${filterType === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>כל התנועות</button>
-          <button onClick={() => setFilterType('expense')} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${filterType === 'expense' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>הוצאות בלבד</button>
-          <button onClick={() => setFilterType('income')} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${filterType === 'income' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>הכנסות בלבד</button>
-        </div>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-right">
-          <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider"><tr><th className="px-4 py-2 font-semibold">תאריך</th><th className="px-4 py-2 font-semibold">תיאור וקטגוריה</th><th className="px-4 py-2 font-semibold hidden sm:table-cell">חשבון מחיוב</th><th className="px-4 py-2 font-semibold">סכום</th></tr></thead>
-          <tbody className="divide-y divide-gray-50">
-            {displayedTxs.map((tx) => {
-              const { mainCat, subCat } = getCategoryDetails(tx.categoryId);
-              const Icon = IconMap[mainCat.icon] || TagIcon;
-              const amountColor = mainCat.type === 'income' || tx.amount > 0 ? 'text-green-600' : 'text-gray-900';
-              return (
-                <tr key={tx.id} onClick={() => onTxClick(tx)} className="hover:bg-blue-50/50 transition-colors cursor-pointer group">
-                  <td className="px-4 py-2.5 text-xs text-gray-500 w-20 sm:w-28 whitespace-nowrap">{tx.date}</td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-full ${mainCat.bg} ${mainCat.color} shrink-0`}><Icon size={16} /></div>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-gray-800 leading-tight flex items-center gap-2">
-                            {tx.description}
-                            {tx.linkedTransactionId && <LinkIcon size={12} className="text-blue-500"/>}
-                        </span>
-                        <span className="text-[11px] text-gray-500 mt-0.5">{mainCat.type === 'income' ? mainCat.name : `${mainCat.name} • ${subCat.name}`}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-2.5 text-xs text-gray-500 hidden sm:table-cell">{getAccountName(tx.accountId || tx.account)}</td>
-                  <td className={`px-4 py-2.5 text-sm font-bold ${amountColor} text-left whitespace-nowrap`} dir="ltr">{tx.amount > 0 ? '+' : ''}{tx.amount.toFixed(2)} ₪</td>
-                </tr>
-              );
-            })}
-            {displayedTxs.length === 0 && <tr><td colSpan="4" className="text-center py-12 text-gray-400">לא נמצאו תנועות.</td></tr>}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function AccountsView({ accounts, setEditingAccount, onAddClick, transactions }) {
+// ==========================================
+// PART 9: ACCOUNTS, BUDGET & SETTINGS VIEWS
+// ==========================================
+function AccountsView({ accounts, handleDeleteAccount, handleSyncAccount, onAddClick, transactions, setEditingAccount }) {
   const banks = accounts.filter(a => a.type === 'bank');
   const credits = accounts.filter(a => a.type === 'credit');
 
   const renderAccountCard = (account) => {
     const upcoming = calculateUpcomingCharge(account, transactions);
+    const isCredit = account.type === 'credit';
     return (
-    <div key={account.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full hover:border-blue-200 transition-colors group relative">
-      <div className="flex justify-between items-start mb-6">
-        <div className={`p-4 rounded-xl ${account.type === 'bank' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
-          {account.type === 'bank' ? <Building size={28} /> : <CreditCard size={28} />}
+    <div key={account.id} className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-indigo-300 transition-colors">
+      <div className="flex items-center gap-4">
+        <div className={`w-10 h-10 flex items-center justify-center rounded-xl ${isCredit ? 'bg-rose-500/10 text-rose-500' : 'bg-blue-500/10 text-blue-500'}`}>
+          {isCredit ? <CreditCard size={20} strokeWidth={1.5} /> : <Building size={20} strokeWidth={1.5} />}
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => setEditingAccount(account)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"><Edit2 size={16} /></button>
+        <div>
+          <div className="text-[var(--color-text-main)]">{account.name}</div>
+          <div className="text-[var(--color-text-muted)] text-xs mt-0.5">
+             {isCredit ? 'חיוב קרוב: ' : 'יתרה: '} 
+             <span className={isCredit || (account.balance||0) < 0 ? 'text-rose-500' : 'text-emerald-500'} dir="ltr">
+               {isCredit ? (upcoming||0).toLocaleString() : (account.balance||0).toLocaleString()} ₪
+             </span>
+          </div>
         </div>
       </div>
-      <div className="flex-1"><h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">{account.name}</h3></div>
-      <div className="mt-6 pt-6 border-t border-gray-100">
-        <p className="text-sm text-gray-500 mb-1">{account.type === 'bank' ? 'יתרה נוכחית' : `חיוב קרוב`}</p>
-        <p className={`text-2xl font-bold ${account.type === 'credit' || account.balance < 0 ? 'text-red-600' : 'text-gray-800'}`} dir="ltr">
-          {account.type === 'credit' ? upcoming.toLocaleString('he-IL', { style: 'currency', currency: 'ILS' }) : account.balance.toLocaleString('he-IL', { style: 'currency', currency: 'ILS' })}
-        </p>
+      <div className="flex items-center gap-1">
+         <button onClick={() => setEditingAccount(account)} className="p-2 text-[var(--color-text-muted)] hover:text-indigo-500 hover:bg-[var(--color-bg-input)] rounded-lg transition-colors" title="ערוך"><Edit2 size={16}/></button>
+         <button onClick={() => handleSyncAccount(account.id)} className="p-2 text-[var(--color-text-muted)] hover:text-emerald-500 hover:bg-[var(--color-bg-input)] rounded-lg transition-colors" title="סנכרון ידני"><RefreshCw size={16}/></button>
+         <button onClick={() => handleDeleteAccount(account.id)} className="p-2 text-[var(--color-text-muted)] hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors" title="מחק חשבון"><Trash2 size={16}/></button>
       </div>
     </div>
   )};
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-500">
-      <section><h2 className="text-xl font-bold text-gray-800 mb-6 border-b pb-2 flex items-center gap-2"><CreditCard size={24} className="text-purple-600" /> כרטיסי אשראי</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {credits.map(renderAccountCard)}
-          <button onClick={onAddClick} className="bg-white border-2 border-dashed border-gray-200 p-6 rounded-2xl flex flex-col items-center justify-center text-gray-400 hover:text-purple-600 hover:border-purple-300 transition-all min-h-[250px] group"><Plus size={32} className="mb-2 group-hover:scale-110 transition-transform" /><span className="font-bold">הוסף כרטיס אשראי</span></button>
+    <div className="space-y-8 animate-in fade-in duration-500 max-w-4xl mx-auto">
+      <section>
+        <div className="flex items-center justify-between mb-4">
+           <h2 className="text-xl text-[var(--color-text-main)] flex items-center gap-2"><CreditCard size={20} className="text-rose-500" /> כרטיסי אשראי</h2>
+           <button onClick={() => onAddClick('credit')} className="text-sm text-indigo-500 flex items-center gap-1 hover:text-indigo-600"><Plus size={16}/> הוסף</button>
         </div>
+        <div className="space-y-3">{credits.map(renderAccountCard)}</div>
       </section>
-      <section><h2 className="text-xl font-bold text-gray-800 mb-6 border-b pb-2 flex items-center gap-2"><Building size={24} className="text-blue-600" /> חשבונות עו״ש</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {banks.map(renderAccountCard)}
-          <button onClick={onAddClick} className="bg-white border-2 border-dashed border-gray-200 p-6 rounded-2xl flex flex-col items-center justify-center text-gray-400 hover:text-blue-600 hover:border-blue-300 transition-all min-h-[250px] group"><Plus size={32} className="mb-2 group-hover:scale-110 transition-transform" /><span className="font-bold">הוסף חשבון בנק</span></button>
+      <section>
+        <div className="flex items-center justify-between mb-4">
+           <h2 className="text-xl text-[var(--color-text-main)] flex items-center gap-2"><Building size={20} className="text-blue-500" /> חשבונות בנק</h2>
+           <button onClick={() => onAddClick('bank')} className="text-sm text-indigo-500 flex items-center gap-1 hover:text-indigo-600"><Plus size={16}/> הוסף</button>
         </div>
+        <div className="space-y-3">{banks.map(renderAccountCard)}</div>
       </section>
     </div>
   );
@@ -672,73 +808,146 @@ function BudgetView({ filteredTransactions, getCategoryDetails }) {
   const expenses = filteredTransactions.filter(t => {
       const { mainCat } = getCategoryDetails(t.categoryId); return mainCat.type !== 'income' && t.amount < 0;
   });
-  const totalExpenses = expenses.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  const totalExpenses = expenses.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
   const budgetLimit = 8000; 
-  const percentage = Math.min(100, Math.round((totalExpenses / budgetLimit) * 100));
+  const percentage = Math.min(100, Math.round((totalExpenses / budgetLimit) * 100)) || 0;
 
   const grouped = {};
   expenses.forEach(t => {
     const { mainCat } = getCategoryDetails(t.categoryId);
-    grouped[mainCat.id] = (grouped[mainCat.id] || 0) + Math.abs(t.amount);
+    grouped[mainCat.id] = (grouped[mainCat.id] || 0) + Math.abs(t.amount || 0);
   });
 
   const sortedCategories = Object.keys(grouped)
     .map(catId => {
        const { mainCat } = getCategoryDetails(EXPENSES.find(e => e.id === catId)?.subs[0]?.id || '');
-       return { cat: mainCat, amount: grouped[catId], percent: Math.round((grouped[catId] / totalExpenses) * 100) };
+       return { cat: mainCat, amount: grouped[catId], percent: Math.round((grouped[catId] / totalExpenses) * 100) || 0 };
     })
     .sort((a, b) => b.amount - a.amount);
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 animate-in fade-in duration-500">
-      <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">סה״כ הוצאות בחודש זה</h2>
-        <p className="text-gray-500 mb-8">מתוך תקציב מתוכנן של ₪{budgetLimit.toLocaleString()}</p>
-        <p className="text-6xl font-extrabold text-red-600 mb-10 tracking-tight" dir="ltr">{(-totalExpenses).toLocaleString(undefined, {minimumFractionDigits:2})} ₪</p>
-        <div className="w-full max-w-md bg-gray-100 rounded-full h-4 mb-3 overflow-hidden"><div className={`h-full rounded-full transition-all duration-1000 ${percentage > 90 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${percentage}%` }}></div></div>
-        <p className="text-sm font-bold text-gray-600">נוצלו {percentage}% מהתקציב החודשי</p>
-      </div>
-      <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-        <h2 className="text-xl font-bold text-gray-800 mb-8 flex items-center gap-2"><PieChart className="text-blue-500" /> פירוט הוצאות לפי קטגוריות</h2>
+      <NeonCard className="flex flex-col justify-center items-center text-center">
+        <h2 className="text-xl text-[var(--color-text-main)] mb-2">סה״כ הוצאות בחודש זה</h2>
+        <p className="text-[var(--color-text-muted)] mb-8">מתוך תקציב מתוכנן של ₪{budgetLimit.toLocaleString()}</p>
+        <p className="text-6xl text-rose-500 mb-10 tracking-tight" dir="ltr">{(totalExpenses||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</p>
+        <div className="w-full max-w-md bg-[var(--color-bg-input)] rounded-full h-3 mb-3 overflow-hidden"><div className={`h-full rounded-full transition-all duration-1000 ${percentage > 90 ? 'bg-rose-500' : 'bg-indigo-500'}`} style={{ width: `${percentage}%` }}></div></div>
+        <p className="text-sm text-[var(--color-text-muted)]">נוצלו {percentage}% מהתקציב</p>
+      </NeonCard>
+      <NeonCard>
+        <h2 className="text-xl text-[var(--color-text-main)] mb-8 flex items-center gap-2"><PieChart className="text-indigo-500" /> פירוט הוצאות</h2>
         <div className="space-y-6">
           {sortedCategories.map((item, idx) => {
-              const Icon = IconMap[item.cat.icon] || TagIcon;
+              const Icon = item.cat.icon || TagIcon;
               return (
                 <div key={idx} className="group">
                   <div className="flex justify-between items-end mb-2">
-                    <div className="flex items-center gap-2"><div className={`p-1.5 rounded-md ${item.cat.bg} ${item.cat.color}`}><Icon size={14} /></div><span className="font-bold text-gray-700">{item.cat.name}</span><span className="text-xs text-gray-400">({item.percent}%)</span></div>
-                    <span className="text-gray-800 font-bold" dir="ltr">{(-item.amount).toLocaleString(undefined, {minimumFractionDigits:2})} ₪</span>
+                    <div className="flex items-center gap-2"><div className={`p-1.5 rounded-md ${item.cat.bg} ${item.cat.color}`}><Icon size={14} /></div><span className="text-[var(--color-text-main)]">{item.cat.name}</span><span className="text-xs text-[var(--color-text-muted)]">({item.percent}%)</span></div>
+                    <span className="text-[var(--color-text-main)]" dir="ltr">{(item.amount||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden"><div className={`${item.cat.barBg} h-full rounded-full transition-all duration-1000`} style={{ width: `${item.percent}%` }}></div></div>
+                  <div className="w-full bg-[var(--color-bg-input)] rounded-full h-2 overflow-hidden"><div className={`${item.cat.barBg} h-full rounded-full transition-all duration-1000`} style={{ width: `${item.percent}%` }}></div></div>
                 </div>
               )
             })
           }
         </div>
-      </div>
+      </NeonCard>
     </div>
   );
 }
 
-function SettingsView() {
+function SettingsView({ appSettings, handleUpdateSetting, theme, toggleTheme }) {
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50/50"><h2 className="text-lg font-bold text-gray-800">הגדרות מקומיות</h2></div>
-        <div className="divide-y divide-gray-100">
-          <SettingsRow icon={<Shield size={22} />} label="הצפנה מתקדמת וגיבוי סודי" description="פרטי ההתחברות שלך נשמרים בווליום נפרד לחלוטין (secrets)" />
-          <SettingsRow icon={<Settings size={22} />} label="ייצוא נתונים" description="הורד גיבוי של כל הנתונים השמורים באפליקציה" />
+    <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in duration-500">
+      <NeonCard noPadding>
+        <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-bg-input)]"><h2 className="text-xl text-[var(--color-text-main)]">הגדרות מתקדמות</h2></div>
+        <div className="divide-y divide-[var(--color-border)]">
+          <div className="p-6 flex items-center justify-between hover:bg-[var(--color-bg-card-hover)] transition-colors">
+             <div><h3 className="text-[var(--color-text-main)] text-lg">עיצוב מערכת</h3><p className="text-sm text-[var(--color-text-muted)]">יום או לילה</p></div>
+             <button onClick={toggleTheme} className="flex items-center gap-2 bg-[var(--color-bg-input)] border border-[var(--color-border)] px-4 py-2 rounded-xl text-[var(--color-text-main)] transition-all">{theme === 'dark' ? <><Sun size={18} className="text-amber-500"/> בהיר</> : <><Moon size={18} className="text-indigo-500"/> כהה</>}</button>
+          </div>
+          <div className="p-6 flex items-center justify-between hover:bg-[var(--color-bg-card-hover)] transition-colors">
+            <div><h3 className="text-[var(--color-text-main)] text-lg">תחילת חודש תקציבי</h3><p className="text-sm text-[var(--color-text-muted)]">לפי איזה יום לסנן את החודש?</p></div>
+            <select value={appSettings.month_start_date || '1'} onChange={(e) => handleUpdateSetting('month_start_date', e.target.value)} className="w-40 p-2.5 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl outline-none focus:border-indigo-500 text-[var(--color-text-main)] cursor-pointer">
+              <option value="1">1 לחודש (רגיל)</option>
+              <option value="10">10 לחודש (אשראי)</option>
+              <option value="15">15 לחודש</option>
+            </select>
+          </div>
+          <div className="p-6 flex items-center justify-between hover:bg-[var(--color-bg-card-hover)] transition-colors">
+            <div><h3 className="text-[var(--color-text-main)] text-lg">זמן סריקת נתונים גלובלי</h3><p className="text-sm text-[var(--color-text-muted)]">ברירת המחדל בעת הוספת חשבון</p></div>
+            <select value={appSettings.scrape_duration || '1'} onChange={(e) => handleUpdateSetting('scrape_duration', e.target.value)} className="w-40 p-2.5 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl outline-none focus:border-indigo-500 text-[var(--color-text-main)]">
+              <option value="1">חודש 1 (מהיר)</option>
+              <option value="6">חצי שנה</option>
+              <option value="12">שנה</option>
+              <option value="24">שנתיים</option>
+              <option value="48">4 שנים</option>
+            </select>
+          </div>
+          <SettingsRow icon={<Shield size={22} />} label="הצפנה וגיבוי" description="הפרטים נשמרים לוקאלית בתיקיית secrets" />
         </div>
-      </div>
+      </NeonCard>
     </div>
   );
 }
 
 // ==========================================
-// Modals
+// PART 10: MODALS
 // ==========================================
+function TransactionViewModal({ tx, getCategoryDetails, getAccountName, onClose, onEdit }) {
+  const { mainCat, subCat } = getCategoryDetails(tx.categoryId);
+  const Icon = subCat?.icon || mainCat?.icon || TagIcon;
+  const isIncome = mainCat.type === 'income' || tx.amount > 0;
 
-function TransactionModal({ tx, getCategoryDetails, accounts, transactions, allExistingTags, INCOMES, EXPENSES, onClose, onSave, onLink, onTxClick }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-md" onClick={onClose}></div>
+      <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-3xl w-full max-w-md shadow-2xl p-6">
+        <div className="flex justify-between items-start mb-6">
+          <button onClick={onClose} className="p-2 text-[var(--color-text-muted)] hover:bg-[var(--color-bg-input)] rounded-full transition-colors"><X size={20} /></button>
+          <div className="text-right flex-1 pr-4">
+            <h3 className="text-xl text-[var(--color-text-main)] font-medium leading-tight">{tx.description}</h3>
+            <p className="text-sm text-[var(--color-text-muted)] mt-1">{getAccountName(tx.accountId || tx.account)}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center py-6 border-y border-[var(--color-border)] mb-6">
+           <div className={`text-5xl ${isIncome ? 'text-emerald-500' : 'text-[var(--color-text-main)]'}`} dir="ltr">
+             {isIncome ? '+' : ''}{(tx.amount||0).toLocaleString(undefined, {minimumFractionDigits:2})} ₪
+           </div>
+        </div>
+
+        <div className="space-y-4 mb-6">
+           <div className="flex justify-between items-center text-sm">
+             <span className="text-[var(--color-text-muted)]">תאריך עסקה:</span><span className="text-[var(--color-text-main)]">{tx.date}</span>
+           </div>
+           <div className="flex justify-between items-center text-sm">
+             <span className="text-[var(--color-text-muted)]">קטגוריה:</span>
+             <span className="flex items-center gap-2 text-[var(--color-text-main)]">
+               <Icon size={14} className={mainCat.color} /> {mainCat.name} {subCat && `• ${subCat.name}`}
+             </span>
+           </div>
+           {tx.notes && (
+             <div className="bg-[var(--color-bg-input)] p-3 rounded-xl text-sm text-[var(--color-text-main)]">
+               <span className="text-[var(--color-text-muted)] block mb-1 text-xs">הערות:</span>{tx.notes}
+             </div>
+           )}
+           {tx.tags && (
+              <div className="flex flex-wrap gap-2 pt-2">
+                 {tx.tags.split(',').filter(t=>t.trim()).map(tag => <span key={tag} className="text-[10px] bg-[var(--color-bg-input)] border border-[var(--color-border)] text-[var(--color-text-muted)] px-2 py-1 rounded">{tag.trim()}</span>)}
+              </div>
+           )}
+        </div>
+
+        <button onClick={() => onEdit(tx)} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl flex items-center justify-center gap-2">
+          <Edit2 size={16}/> ערוך תנועה
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TransactionModal({ tx, getCategoryDetails, accounts, transactions, onClose, onSave, onLink, onTxClick }) {
   const currentDetails = getCategoryDetails(tx.categoryId);
   
   const [notes, setNotes] = useState(tx.notes || '');
@@ -746,10 +955,9 @@ function TransactionModal({ tx, getCategoryDetails, accounts, transactions, allE
   const [tagInput, setTagInput] = useState('');
   const [applyToAll, setApplyToAll] = useState(false);
 
-  // Link transaction state
   const [isLinking, setIsLinking] = useState(false);
   const linkedTx = tx.linkedTransactionId ? transactions.find(t => t.id === tx.linkedTransactionId) : null;
-  const linkableTxs = transactions.filter(t => t.id !== tx.id && !t.linkedTransactionId).slice(0, 10); // מציג 10 תנועות אחרונות לקישור מהיר
+  const linkableTxs = transactions.filter(t => t.id !== tx.id && !t.linkedTransactionId).slice(0, 20); 
 
   const [activeTabType, setActiveTabType] = useState(currentDetails.mainCat.type);
   const [view, setView] = useState('main'); 
@@ -758,6 +966,12 @@ function TransactionModal({ tx, getCategoryDetails, accounts, transactions, allE
   
   const acc = accounts.find(a => a.id === tx.accountId || a.id === tx.account);
   
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = originalStyle; };
+  }, []);
+
   const handleAddTag = (tag) => { if (tag && !tags.includes(tag)) setTags([...tags, tag]); setTagInput(''); };
   const removeTag = (tagToRemove) => setTags(tags.filter(t => t !== tagToRemove));
 
@@ -766,139 +980,141 @@ function TransactionModal({ tx, getCategoryDetails, accounts, transactions, allE
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in">
-      <div className="bg-gray-50 rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col md:flex-row max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-6">
+      <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-md" onClick={onClose}></div>
+      <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-border)] w-full max-w-5xl rounded-3xl shadow-2xl flex flex-col md:flex-row max-h-[95vh] overflow-hidden animate-in zoom-in-95 duration-200">
         
-        {/* צד ימין - פרטי עסקה */}
-        <div className="w-full md:w-1/2 bg-white border-l border-gray-100 flex flex-col overflow-y-auto">
-          <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
-            <button onClick={onClose} className="p-2 bg-white rounded-full text-gray-400 hover:text-gray-800 shadow-sm border border-gray-200"><X size={18} /></button>
+        {/* Right Panel */}
+        <div className="w-full md:w-1/2 flex flex-col border-l border-[var(--color-border)] bg-[var(--color-bg-main)]">
+          <div className="p-6 flex justify-between items-start bg-[var(--color-bg-card)] border-b border-[var(--color-border)] shrink-0">
+            <button onClick={onClose} className="p-2 bg-[var(--color-bg-input)] rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] border border-[var(--color-border)] transition-colors"><X size={20} /></button>
             <div className="text-right flex-1 mr-4">
-               <h3 className="text-2xl font-black text-gray-800 leading-tight">{tx.description}</h3>
-               <p className="text-sm text-gray-500 mt-1 flex items-center justify-end gap-1"><Building size={14} /> {acc?.name || tx.account}</p>
+               <h3 className="text-xl text-[var(--color-text-main)] leading-tight">{tx.description}</h3>
+               <p className="text-sm text-[var(--color-text-muted)] mt-1 flex items-center justify-end gap-1"><Building size={14} /> {acc?.name || tx.account}</p>
             </div>
           </div>
 
-          <div className="p-6 space-y-6">
+          <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
             <div className="text-center">
-              <p className="text-sm text-gray-500 mb-1">סכום רכישה</p>
-              <p className={`text-4xl font-black ${tx.amount < 0 ? 'text-gray-900' : 'text-green-600'}`} dir="ltr">
-                {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString(undefined, {minimumFractionDigits: 2})} ₪
+              <p className={`text-5xl ${tx.amount < 0 ? 'text-[var(--color-text-main)]' : 'text-emerald-500'}`} dir="ltr">
+                {tx.amount > 0 ? '+' : ''}{(tx.amount||0).toLocaleString(undefined, {minimumFractionDigits: 2})} <span className="text-2xl opacity-50">₪</span>
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Calendar size={12}/> תאריך עסקה</p><p className="font-bold text-gray-800">{tx.date}</p>
+              <div className="bg-[var(--color-bg-input)] p-4 rounded-xl border border-[var(--color-border)] text-center">
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">תאריך עסקה</p><p className="text-[var(--color-text-main)]">{tx.date}</p>
               </div>
-              <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
-                <p className="text-xs text-blue-500 mb-1 flex items-center gap-1"><CreditCard size={12}/> תאריך חיוב</p><p className="font-bold text-blue-800">{tx.billingDate}</p>
+              <div className="bg-[var(--color-bg-input)] p-4 rounded-xl border border-[var(--color-border)] text-center">
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">תאריך חיוב</p><p className="text-[var(--color-text-main)]">{tx.billingDate}</p>
               </div>
             </div>
 
-            {/* אזור קישור תנועות (חדש) */}
-            <div className="bg-purple-50 p-4 rounded-2xl border border-purple-100">
-              <p className="text-sm font-bold text-purple-800 mb-2 flex items-center gap-1"><LinkIcon size={16}/> תנועה מקושרת (לדוגמה: החזר עתידי)</p>
-              
+            <div className="bg-indigo-500/10 p-5 rounded-2xl border border-indigo-500/20">
+              <p className="text-sm text-indigo-500 mb-3 flex items-center gap-2"><LinkIcon size={18}/> תנועה מקושרת</p>
               {linkedTx ? (
-                <div className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-purple-100 group">
-                  <div className="flex flex-col cursor-pointer" onClick={() => onTxClick(linkedTx)}>
-                     <span className="font-bold text-gray-800 group-hover:text-purple-600">{linkedTx.description}</span>
-                     <span className="text-xs text-gray-500">{linkedTx.date} • <span dir="ltr">{linkedTx.amount}₪</span></span>
+                <div className="flex justify-between items-center bg-[var(--color-bg-card)] p-4 rounded-xl border border-[var(--color-border)] shadow-sm">
+                  <div className="flex flex-col cursor-pointer hover:text-indigo-500 transition-colors" onClick={() => onTxClick(linkedTx)}>
+                     <span className="text-[var(--color-text-main)]">{linkedTx.description}</span>
+                     <span className="text-xs text-[var(--color-text-muted)]">{linkedTx.date} • <span dir="ltr">{(linkedTx.amount||0)}₪</span></span>
                   </div>
-                  <button onClick={() => onLink(tx.id, null)} className="p-2 text-red-400 hover:bg-red-50 rounded-lg" title="נתק קישור"><Unlink size={16}/></button>
+                  <button onClick={() => onLink(tx.id, null)} className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors" title="נתק קישור"><Unlink size={18}/></button>
                 </div>
               ) : isLinking ? (
-                <div className="space-y-2">
-                  <select onChange={(e) => { if(e.target.value) { onLink(tx.id, e.target.value); setIsLinking(false); }}} className="w-full p-2 text-sm border border-purple-200 rounded-lg outline-none">
+                <div className="space-y-3">
+                  <select onChange={(e) => { if(e.target.value) { onLink(tx.id, e.target.value); setIsLinking(false); }}} className="w-full p-3 text-sm border border-[var(--color-border)] bg-[var(--color-bg-card)] text-[var(--color-text-main)] rounded-xl outline-none focus:border-indigo-500">
                     <option value="">-- בחר תנועה לקישור --</option>
-                    {linkableTxs.map(t => <option key={t.id} value={t.id}>{t.date} - {t.description} ({t.amount}₪)</option>)}
+                    {linkableTxs.map(t => <option key={t.id} value={t.id}>{t.date} - {t.description} ({(t.amount||0)}₪)</option>)}
                   </select>
-                  <button onClick={() => setIsLinking(false)} className="text-xs text-gray-500 hover:text-gray-800">ביטול</button>
+                  <button onClick={() => setIsLinking(false)} className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]">ביטול</button>
                 </div>
               ) : (
-                <button onClick={() => setIsLinking(true)} className="w-full bg-white border border-dashed border-purple-200 p-2 rounded-xl text-sm font-bold text-purple-600 hover:bg-purple-100 transition-colors">
+                <button onClick={() => setIsLinking(true)} className="w-full bg-[var(--color-bg-card)] border-2 border-dashed border-indigo-500/50 p-3 rounded-xl text-sm text-indigo-500 hover:bg-indigo-500/20 transition-colors">
                   + קשר לתנועה אחרת
                 </button>
               )}
             </div>
 
             <div>
-              <label className="text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-1"><AlignLeft size={16}/> הערות</label>
-              <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="הערות לעסקה זו..." rows="2" className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none"></textarea>
+              <label className="block text-sm text-[var(--color-text-muted)] mb-2 flex items-center gap-1"><AlignLeft size={16}/> הערות</label>
+              <textarea value={notes} onChange={e => setNotes(e.target.value)} rows="2" className="w-full p-4 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl focus:border-indigo-500 text-[var(--color-text-main)] outline-none text-sm resize-none"></textarea>
             </div>
 
             <div>
-              <label className="text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-1"><TagIcon size={16}/> תגיות</label>
-              <div className="flex flex-wrap gap-2 mb-2">
+              <label className="block text-sm text-[var(--color-text-muted)] mb-2 flex items-center gap-1"><TagIcon size={16}/> תגיות</label>
+              <div className="bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl p-3 flex flex-wrap gap-2 items-center focus-within:border-indigo-500">
                 {tags.map(tag => (
-                  <span key={tag} className="bg-gray-900 text-white text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1">{tag} <X size={12} className="cursor-pointer hover:text-red-400" onClick={() => removeTag(tag)}/></span>
+                  <span key={tag} className="bg-[var(--color-bg-card)] border border-[var(--color-border)] text-[var(--color-text-main)] px-2 py-1 rounded text-xs flex items-center gap-1">{tag} <X size={12} className="cursor-pointer" onClick={() => removeTag(tag)}/></span>
                 ))}
+                <input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddTag(tagInput))} placeholder="הוסף תגית ו-Enter..." className="bg-transparent outline-none text-[var(--color-text-main)] text-sm px-2 flex-1" />
               </div>
-              <input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddTag(tagInput))} placeholder="הוסף תגית ולחץ Enter..." className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm mb-2" />
             </div>
 
-            <label className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl cursor-pointer hover:bg-blue-100 transition-colors">
-              <input type="checkbox" checked={applyToAll} onChange={e => setApplyToAll(e.target.checked)} className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500" />
-              <span className="text-sm font-bold text-blue-900">החל קטגוריה על כל התנועות הדומות</span>
+            <label className="flex items-center gap-3 p-4 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl cursor-pointer hover:bg-[var(--color-bg-card-hover)] shadow-sm">
+              <div className="relative flex items-center justify-center shrink-0">
+                <input type="checkbox" checked={applyToAll} onChange={e => setApplyToAll(e.target.checked)} className="peer sr-only" />
+                <div className="w-5 h-5 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded peer-checked:bg-indigo-500 peer-checked:border-indigo-500 transition-all"></div>
+                <Check size={14} className="absolute text-white opacity-0 peer-checked:opacity-100 transition-opacity"/>
+              </div>
+              <span className="text-sm text-[var(--color-text-main)]">שנה בכל התנועות הדומות</span>
             </label>
 
           </div>
-          <div className="p-4 mt-auto">
-            <button onClick={handleSave} className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-colors shadow-md">שמור שינויים</button>
+          <div className="p-6 shrink-0 bg-[var(--color-bg-card)] border-t border-[var(--color-border)]">
+            <button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-lg py-3 rounded-xl transition-colors">שמור שינויים</button>
           </div>
         </div>
 
-        {/* צד שמאל - בחירת קטגוריה */}
-        <div className="w-full md:w-1/2 flex flex-col bg-gray-50 h-full max-h-[50vh] md:max-h-full">
-          <div className="bg-white flex border-b border-gray-200 shrink-0">
-            <button onClick={() => { setActiveTabType('expense'); setView('main'); }} className={`flex-1 py-4 text-center font-bold text-sm transition-colors ${activeTabType === 'expense' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>הוצאות</button>
-            <button onClick={() => { setActiveTabType('income'); setView('main'); }} className={`flex-1 py-4 text-center font-bold text-sm transition-colors ${activeTabType === 'income' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>הכנסות</button>
+        {/* Left Panel */}
+        <div className="w-full md:w-1/2 flex flex-col bg-[var(--color-bg-card)] h-full max-h-[50vh] md:max-h-full">
+          <div className="flex bg-[var(--color-bg-input)] border-b border-[var(--color-border)] p-2 shrink-0">
+            <button onClick={() => { setActiveTabType('expense'); setView('main'); }} className={`flex-1 py-3 text-center text-sm rounded-xl transition-all ${activeTabType === 'expense' ? 'bg-[var(--color-bg-card)] text-[var(--color-text-main)] shadow-sm border border-[var(--color-border)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הוצאות</button>
+            <button onClick={() => { setActiveTabType('income'); setView('main'); }} className={`flex-1 py-3 text-center text-sm rounded-xl transition-all ${activeTabType === 'income' ? 'bg-[var(--color-bg-card)] text-[var(--color-text-main)] shadow-sm border border-[var(--color-border)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הכנסות</button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
             {activeTabType === 'income' ? (
-              <div>
-                <h4 className="font-bold text-gray-800 mb-4 text-center">סוג הכנסה</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {INCOMES.map(cat => {
-                    const Icon = IconMap[cat.icon] || TagIcon;
-                    const isSelected = selectedSubCatId === cat.id;
-                    return (
-                      <button key={cat.id} onClick={() => setSelectedSubCatId(cat.id)} className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all ${isSelected ? 'border-green-500 bg-green-50 ring-2 ring-green-500/20' : 'border-gray-200 bg-white hover:border-green-300 hover:shadow-sm'}`}>
-                        <div className={`p-3 rounded-full mb-2 ${cat.bg} ${cat.color}`}><Icon size={24} /></div><span className="text-xs font-bold text-gray-700 text-center">{cat.name}</span>
-                      </button>
-                    )
-                  })}
-                </div>
+              <div className="grid grid-cols-2 gap-3">
+                {INCOMES.map(cat => {
+                  const Icon = cat.icon || TagIcon;
+                  const isSelected = selectedSubCatId === cat.id;
+                  return (
+                    <button key={cat.id} onClick={() => setSelectedSubCatId(cat.id)} className={`flex flex-col items-center p-4 rounded-xl border transition-all ${isSelected ? 'border-emerald-500 bg-emerald-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-emerald-500'}`}>
+                      <Icon size={24} className={`mb-2 ${cat.color}`} strokeWidth={1.5} />
+                      <span className="text-sm text-[var(--color-text-main)] text-center">{cat.name}</span>
+                    </button>
+                  )
+                })}
               </div>
             ) : view === 'main' ? (
-              <div>
-                <h4 className="font-bold text-gray-800 mb-4 text-center">בחר ענף ראשי</h4>
-                <div className="grid grid-cols-3 gap-4">
-                  {EXPENSES.map(mainCat => {
-                    const Icon = IconMap[mainCat.icon] || TagIcon;
-                    const isSelected = selectedMainCatObj.id === mainCat.id;
-                    return (
-                      <button key={mainCat.id} onClick={() => { setSelectedMainCatObj(mainCat); setView('sub'); }} className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all ${isSelected ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20' : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'}`}>
-                        <div className={`p-3 rounded-full mb-2 ${mainCat.bg} ${mainCat.color}`}><Icon size={24} /></div><span className="text-xs font-bold text-gray-700 text-center">{mainCat.name}</span>
-                      </button>
-                    )
-                  })}
-                </div>
+              <div className="grid grid-cols-2 gap-3">
+                {EXPENSES.map(mainCat => {
+                  const Icon = mainCat.icon || TagIcon;
+                  const isSelected = selectedMainCatObj.id === mainCat.id;
+                  return (
+                    <button key={mainCat.id} onClick={() => { setSelectedMainCatObj(mainCat); setView('sub'); }} className={`flex flex-col items-center p-4 rounded-xl border transition-all ${isSelected ? 'border-indigo-500 bg-indigo-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-indigo-500'}`}>
+                      <Icon size={24} className={`mb-2 ${mainCat.color}`} strokeWidth={1.5} />
+                      <span className="text-sm text-[var(--color-text-main)] text-center">{mainCat.name}</span>
+                    </button>
+                  )
+                })}
               </div>
             ) : (
               <div>
-                <button onClick={() => setView('main')} className="flex items-center gap-2 text-sm font-bold text-blue-600 mb-4 hover:text-blue-800 transition-colors"><ChevronLeft size={16} /> חזור לענפים ראשיים</button>
-                <div className="flex items-center gap-3 mb-6 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                  <div className={`p-2 rounded-full ${selectedMainCatObj.bg} ${selectedMainCatObj.color}`}>{React.createElement(IconMap[selectedMainCatObj.icon] || TagIcon, { size: 20 })}</div><h4 className="font-bold text-lg text-gray-800">{selectedMainCatObj.name}</h4>
+                <div className="flex items-center justify-between mb-4 sticky top-0 bg-[var(--color-bg-card)] z-10 py-2 border-b border-[var(--color-border)]">
+                  <h4 className="text-lg text-[var(--color-text-main)] flex items-center gap-2">
+                    {React.createElement(selectedMainCatObj.icon || TagIcon, { size: 20, className: selectedMainCatObj.color })} {selectedMainCatObj.name}
+                  </h4>
+                  <button onClick={() => setView('main')} className="text-sm text-[var(--color-text-muted)] flex items-center hover:text-[var(--color-text-main)]">חזור <ChevronRight size={16} /></button>
                 </div>
-                <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm divide-y divide-gray-50">
+                <div className="grid grid-cols-2 gap-3 pb-8">
                   {selectedMainCatObj.subs.map(sub => {
+                    const SubIcon = sub.icon || TagIcon;
                     const isSelected = selectedSubCatId === sub.id;
                     return (
-                      <button key={sub.id} onClick={() => setSelectedSubCatId(sub.id)} className={`w-full p-4 text-right flex justify-between items-center transition-colors hover:bg-blue-50 ${isSelected ? 'bg-blue-50/50' : ''}`}>
-                        <span className={`text-sm ${isSelected ? 'font-bold text-blue-600' : 'text-gray-700 font-medium'}`}>{sub.name}</span>{isSelected && <Check size={18} className="text-blue-600" />}
+                      <button key={sub.id} onClick={() => setSelectedSubCatId(sub.id)} className={`flex flex-col items-center p-4 border rounded-xl transition-all ${isSelected ? 'border-indigo-500 bg-indigo-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-indigo-500'}`}>
+                        <SubIcon size={24} className={`mb-2 ${isSelected ? 'text-indigo-600' : 'text-[var(--color-text-muted)]'}`} strokeWidth={1.5} />
+                        <span className="text-sm text-center text-[var(--color-text-main)]">{sub.name}</span>
                       </button>
                     );
                   })}
@@ -914,92 +1130,118 @@ function TransactionModal({ tx, getCategoryDetails, accounts, transactions, allE
 
 function EditAccountModal({ account, onClose, onSave }) {
   const [name, setName] = useState(account.name);
+  const [scrapeDuration, setScrapeDuration] = useState(account.scrapeDuration || '');
+
   return (
-    <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in">
-      <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 p-6 space-y-6">
-        <div className="flex justify-between items-center"><h3 className="text-xl font-bold text-gray-800">הגדרות {account.type === 'bank' ? 'חשבון' : 'כרטיס'}</h3><button onClick={onClose} className="text-gray-400 hover:text-gray-800"><X size={20} /></button></div>
-        <div><label className="block text-sm font-medium text-gray-600 mb-2">שם תצוגה</label><input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-lg font-bold" /></div>
-        <button onClick={() => onSave(account.id, name)} className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-colors shadow-md">שמור שינויים</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-md" onClick={onClose}></div>
+      <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-3xl w-full max-w-sm shadow-2xl p-6 space-y-4">
+        <div className="flex justify-between items-center mb-2"><h3 className="text-xl text-[var(--color-text-main)]">הגדרות חשבון</h3><button onClick={onClose} className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"><X size={20} /></button></div>
+        <div>
+           <label className="text-sm text-[var(--color-text-muted)] mb-1 block">שם תצוגה</label>
+           <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 bg-[var(--color-bg-input)] text-[var(--color-text-main)] border border-[var(--color-border)] rounded-xl outline-none" />
+        </div>
+        <div>
+           <label className="text-sm text-[var(--color-text-muted)] mb-1 block">זמן משיכת נתונים ספציפי</label>
+           <select value={scrapeDuration} onChange={e => setScrapeDuration(e.target.value)} className="w-full p-3 bg-[var(--color-bg-input)] text-[var(--color-text-main)] border border-[var(--color-border)] rounded-xl outline-none">
+             <option value="">-- הגדרת ברירת מחדל --</option>
+             <option value="1">1 חודש</option>
+             <option value="6">חצי שנה</option>
+             <option value="12">שנה</option>
+             <option value="24">שנתיים</option>
+             <option value="48">4 שנים</option>
+           </select>
+        </div>
+        <button onClick={() => onSave(account.id, name, account.billingDate, scrapeDuration)} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl mt-4">שמור שינויים</button>
       </div>
     </div>
   );
 }
 
-function SyncModal({ onClose, onSuccess }) {
+function SyncModal({ type, scrapeDuration, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [savedCreds, setSavedCreds] = useState([]);
-  
-  const [companyId, setCompanyId] = useState('leumi');
+  const [companyId, setCompanyId] = useState(type === 'credit' ? 'isracard' : 'leumi');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [saveToSecrets, setSaveToSecrets] = useState(true);
-
-  useEffect(() => { fetch('/api/credentials').then(r => r.json()).then(data => setSavedCreds(data.credentials || [])); }, []);
-
-  const handleSyncWithSaved = async (savedId) => {
-    setLoading(true); setError(null);
-    try {
-      const res = await fetch('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ savedId }) });
-      const data = await res.json();
-      if (data.success) onSuccess(); else setError(data.errorMessage || data.message || 'שגיאה בחיבור.');
-    } catch (err) { setError('שגיאת תקשורת.'); } finally { setLoading(false); }
-  };
+  const [customDuration, setCustomDuration] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true); setError(null);
+    setLoading(true);
     try {
-      if (saveToSecrets) {
-        await fetch('/api/credentials', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, username, password }) });
-      }
-      const res = await fetch('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, credentials: { id: username, username, password } }) });
+      await fetch('/api/credentials', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, username, password, scrapeDuration: customDuration || null }) });
+      const res = await fetch('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, credentials: { id: username, username, password }, customScrapeDuration: customDuration || null }) });
       const data = await res.json();
-      if (data.success) onSuccess(); else setError(data.errorMessage || data.message || 'שגיאה בחיבור.');
-    } catch (err) { setError('שגיאת תקשורת.'); } finally { setLoading(false); }
+      if (data.success) onSuccess();
+    } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative animate-in zoom-in-95 duration-200">
-        <div className="bg-blue-600 p-6 text-white flex justify-between items-center"><h2 className="text-xl font-bold flex items-center gap-2"><Lock size={20} /> חיבור מוסד פיננסי</h2><button onClick={onClose} disabled={loading} className="hover:bg-white/20 p-1 rounded transition-colors"><X size={24} /></button></div>
-        <div className="p-6">
-          {error && <div className="p-3 bg-red-50 text-red-600 border border-red-200 rounded-xl text-sm font-medium flex items-start gap-2 mb-4"><AlertCircle size={16} className="mt-0.5 shrink-0" /><span>{error}</span></div>}
-          {savedCreds.length > 0 && (
-            <div className="mb-6 border-b border-gray-100 pb-6">
-              <p className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-1"><Save size={16}/> התחברות מהירה מהכספת</p>
-              <div className="space-y-2">
-                {savedCreds.map(cred => (
-                  <button key={cred.id} disabled={loading} onClick={() => handleSyncWithSaved(cred.id)} className="w-full flex justify-between items-center p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-colors">
-                    <span className="font-bold text-gray-800">{cred.companyId}</span><span className="text-sm text-gray-500">{cred.username}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <p className="text-sm font-bold text-gray-700 mb-2">חיבור מוסד חדש</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-md" onClick={onClose}></div>
+      <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-3xl w-full max-w-sm shadow-2xl p-6">
+         <div className="flex justify-between items-center mb-6">
+           <h2 className="text-xl text-[var(--color-text-main)]">חיבור מוסד חדש</h2>
+           <button onClick={onClose} className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"><X size={20} /></button>
+         </div>
+         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <select value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="leumi">בנק לאומי</option><option value="hapoalim">בנק הפועלים</option><option value="discount">בנק דיסקונט</option><option value="mizrahi">בנק מזרחי טפחות</option><option value="max">מקס (Max)</option><option value="isracard">ישראכרט</option><option value="visa-cal">כאל (Cal)</option>
+              <label className="text-sm text-[var(--color-text-muted)] block mb-1">מוסד פיננסי</label>
+              <select value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="w-full p-3 bg-[var(--color-bg-input)] text-[var(--color-text-main)] border border-[var(--color-border)] rounded-xl outline-none">
+                {type !== 'credit' && (
+                  <optgroup label="בנקים">
+                    <option value="leumi">בנק לאומי</option>
+                    <option value="hapoalim">בנק הפועלים</option>
+                    <option value="discount">בנק דיסקונט</option>
+                    <option value="mizrahi">בנק מזרחי טפחות</option>
+                    <option value="beinleumi">הבנק הבינלאומי / אוצר החייל</option>
+                    <option value="yahav">בנק יהב</option>
+                    <option value="massad">בנק מסד</option>
+                    <option value="pagi">פג"י</option>
+                    <option value="union-bank">בנק אגוד</option>
+                  </optgroup>
+                )}
+                {type !== 'bank' && (
+                  <optgroup label="כרטיסי אשראי">
+                    <option value="isracard">ישראכרט</option>
+                    <option value="max">מקס (Max)</option>
+                    <option value="visa-cal">כאל (Cal)</option>
+                    <option value="amex">אמריקן אקספרס</option>
+                  </optgroup>
+                )}
               </select>
             </div>
-            <div><input type="text" placeholder="שם משתמש / ת.ז" required value={username} onChange={(e) => setUsername(e.target.value)} className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" /></div>
-            <div><input type="password" placeholder="סיסמה" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-left" dir="ltr" /></div>
-            <label className="flex items-center gap-2 p-2 cursor-pointer mt-2">
-              <input type="checkbox" checked={saveToSecrets} onChange={e => setSaveToSecrets(e.target.checked)} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" /><span className="text-sm font-medium text-gray-700">שמור פרטי התחברות (בכספת הנפרדת)</span>
-            </label>
-            <button type="submit" disabled={loading} className={`w-full py-4 rounded-xl font-bold text-white transition-all mt-4 shadow-md flex justify-center items-center gap-2 ${loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
-              {loading ? <><RefreshCw size={20} className="animate-spin" />מתחבר ומושך נתונים...</> : 'התחבר וסנכרן נתונים'}
+            
+            <div className="flex gap-2">
+               <div className="flex-1"><input type="text" placeholder="שם משתמש / ת.ז" required value={username} onChange={(e) => setUsername(e.target.value)} className="w-full p-3 bg-[var(--color-bg-input)] text-[var(--color-text-main)] border border-[var(--color-border)] rounded-xl outline-none" /></div>
+               <div className="flex-1"><input type="password" placeholder="סיסמה" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-3 bg-[var(--color-bg-input)] text-[var(--color-text-main)] border border-[var(--color-border)] rounded-xl outline-none text-left" dir="ltr" /></div>
+            </div>
+
+            <div>
+               <label className="text-sm text-[var(--color-text-muted)] block mb-1">זמן סריקה (ברירת מחדל: {scrapeDuration} חודשים)</label>
+               <select value={customDuration} onChange={(e) => setCustomDuration(e.target.value)} className="w-full p-3 bg-[var(--color-bg-input)] text-[var(--color-text-main)] border border-[var(--color-border)] rounded-xl outline-none">
+                  <option value="">השתמש בהגדרת ברירת מחדל</option>
+                  <option value="1">1 חודש</option>
+                  <option value="6">חצי שנה</option>
+                  <option value="12">שנה</option>
+                  <option value="24">שנתיים</option>
+                  <option value="48">4 שנים</option>
+               </select>
+            </div>
+
+            <button type="submit" disabled={loading} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl mt-4 flex justify-center items-center gap-2">
+              {loading ? <><RefreshCw size={18} className="animate-spin"/> מתחבר...</> : 'התחבר וסנכרן נתונים'}
             </button>
-          </form>
-        </div>
+         </form>
       </div>
     </div>
   );
 }
 
-function SidebarItem({ icon, label, active, onClick }) { return (<button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-medium ${active ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent'}`}><span className={active ? 'text-blue-600' : 'text-gray-400'}>{icon}</span><span>{label}</span></button>); }
-function MobileNavItem({ icon, label, active, onClick }) { return (<button onClick={onClick} className={`flex flex-col items-center justify-center w-16 transition-colors ${active ? 'text-blue-600' : 'text-gray-400'}`}><div className={`mb-1 transition-transform ${active ? 'scale-110' : ''}`}>{icon}</div><span className="text-[10px] font-medium">{label}</span></button>); }
-function StatCard({ title, amount, trend, isPositive, icon, color }) { const bgColors = { blue: 'bg-blue-50', green: 'bg-green-50', red: 'bg-red-50' }; return (<div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-start justify-between hover:shadow-md transition-shadow group"><div><p className="text-sm font-medium text-gray-500 mb-2">{title}</p><h3 className="text-3xl font-black text-gray-800 mb-3 tracking-tight" dir="ltr">{amount}</h3><p className={`text-sm font-medium flex items-center gap-1 ${isPositive ? 'text-green-600' : 'text-gray-500'}`}><span dir="ltr">{trend}</span></p></div><div className={`p-4 rounded-xl ${bgColors[color]} group-hover:scale-110 transition-transform`}>{icon}</div></div>); }
-function SettingsRow({ icon, label, description }) { return (<button className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors text-right"><div className="flex items-center gap-4 text-gray-800"><div className="p-3 bg-gray-100 rounded-xl text-gray-600">{icon}</div><div><h3 className="font-bold text-base">{label}</h3><p className="text-sm text-gray-500 mt-0.5">{description}</p></div></div><ChevronLeft size={20} className="text-gray-400" /></button>); }
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <MainApp />
+    </ErrorBoundary>
+  );
+}
