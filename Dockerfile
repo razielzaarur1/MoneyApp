@@ -7,18 +7,24 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 WORKDIR /app
 
-# שלב א': התקנת השרת
-COPY package*.json ./
+# יצירת התיקיות מראש והענקת הרשאות למשתמש node (Non-root)
+RUN mkdir -p /app/data /app/secrets && chown -R node:node /app
+
+# שלב א': התקנת השרת - העתקה למשתמש הרגיל ולא ל-Root
+COPY --chown=node:node package*.json ./
 RUN npm install
 
 # שלב ב': בניית האתר (Frontend)
-COPY frontend/package*.json ./frontend/
+COPY --chown=node:node frontend/package*.json ./frontend/
 RUN cd frontend && npm install
-COPY frontend/ ./frontend/
+COPY --chown=node:node frontend/ ./frontend/
 RUN cd frontend && npm run build
 
 # שלב ג': העתקת שאר קבצי השרת
-COPY . .
+COPY --chown=node:node . .
+
+# מעבר למשתמש הלא-מועדף להגברת אבטחה
+USER node
 
 EXPOSE 3001
 CMD ["npm", "start"]

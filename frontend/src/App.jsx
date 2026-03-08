@@ -670,8 +670,28 @@ function SettingsView({ appSettings, handleUpdateSetting, theme, toggleTheme, ha
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in duration-500">
       <NeonCard noPadding>
-        <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-bg-input)]"><h2 className="text-xl text-[var(--color-text-main)]">הגדרות מתקדמות</h2></div>
+        <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-bg-input)]">
+          <h2 className="text-xl text-[var(--color-text-main)]">הגדרות מתקדמות</h2>
+        </div>
         <div className="divide-y divide-[var(--color-border)]">
+          
+          {/* --- הגדרת טלגרם החדשה --- */}
+          <div className="p-6 flex items-center justify-between hover:bg-[var(--color-bg-card-hover)] transition-colors">
+            <div>
+              <h3 className="text-[var(--color-text-main)] text-lg">חיבור לטלגרם</h3>
+              <p className="text-sm text-[var(--color-text-muted)]">הכנס את ה-Chat ID שלך כדי לקבל התראות וסנכרון</p>
+            </div>
+            <input 
+              type="text" 
+              placeholder="לדוגמה: 123456789"
+              value={appSettings.telegram_chat_id || ''} 
+              onChange={(e) => handleUpdateSetting('telegram_chat_id', e.target.value.trim())}
+              className="w-40 p-2.5 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl outline-none focus:border-indigo-500 text-[var(--color-text-main)] font-medium text-left"
+              dir="ltr"
+            />
+          </div>
+          {/* ------------------------- */}
+
           <div className="p-6 flex items-center justify-between hover:bg-[var(--color-bg-card-hover)] transition-colors"><div><h3 className="text-[var(--color-text-main)] text-lg">עיצוב מערכת</h3><p className="text-sm text-[var(--color-text-muted)]">יום או לילה</p></div><button onClick={toggleTheme} className="flex items-center gap-2 bg-[var(--color-bg-input)] border border-[var(--color-border)] px-4 py-2 rounded-xl text-[var(--color-text-main)] transition-all font-medium">{theme === 'dark' ? <><Sun size={18} className="text-amber-500"/> בהיר</> : <><Moon size={18} className="text-indigo-500"/> כהה</>}</button></div>
           <div className="p-6 flex items-center justify-between hover:bg-[var(--color-bg-card-hover)] transition-colors"><div><h3 className="text-[var(--color-text-main)] text-lg">תחילת חודש תקציבי</h3><p className="text-sm text-[var(--color-text-muted)]">לפי איזה יום לסנן את החודש?</p></div><select value={appSettings.month_start_date || '1'} onChange={(e) => handleUpdateSetting('month_start_date', e.target.value)} className="w-40 p-2.5 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl outline-none focus:border-indigo-500 text-[var(--color-text-main)] cursor-pointer font-medium"><option value="1">1 לחודש (רגיל)</option><option value="10">10 לחודש (אשראי)</option><option value="15">15 לחודש</option></select></div>
           <div className="p-6 flex items-center justify-between hover:bg-[var(--color-bg-card-hover)] transition-colors"><div><h3 className="text-[var(--color-text-main)] text-lg">זמן סריקת נתונים גלובלי</h3><p className="text-sm text-[var(--color-text-muted)]">ברירת המחדל בעת הוספת חשבון</p></div><select value={appSettings.scrape_duration || '1'} onChange={(e) => handleUpdateSetting('scrape_duration', e.target.value)} className="w-40 p-2.5 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl outline-none focus:border-indigo-500 text-[var(--color-text-main)] cursor-pointer font-medium"><option value="1">חודש 1 (מהיר)</option><option value="6">חצי שנה</option><option value="12">שנה</option><option value="24">שנתיים</option><option value="48">4 שנים</option></select></div>
@@ -691,6 +711,11 @@ function SettingsView({ appSettings, handleUpdateSetting, theme, toggleTheme, ha
     </div>
   );
 }
+
+
+
+
+
 
 // ==========================================
 // PART 10: MODALS & FINAL EXPORT (החלק האחרון בקובץ App.jsx!)
