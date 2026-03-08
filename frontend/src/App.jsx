@@ -501,25 +501,25 @@ function TransactionsView({ filteredTransactions, onTxClick, getCategoryDetails,
     displayedTxs.forEach(tx => {
       const txMonth = getCustomMonthYear(tx.date, appSettings.month_start_date || '1'); const txDay = tx.date;
       if (txMonth !== currentMonth) {
-        if (txMonth !== currentAppMonth) { rows.push(<tr key={`month-${txMonth}`} className="bg-[var(--color-bg-main)] border-b border-[var(--color-border)]"><td colSpan="6" className="px-4 py-2 text-sm font-medium text-[var(--color-text-main)] bg-indigo-500/5 text-center">{txMonth}</td></tr>); }
+        if (txMonth !== currentAppMonth) { rows.push(<tr key={`month-${txMonth}`} className="bg-[var(--color-bg-main)] border-b border-[var(--color-border)]"><td colSpan="6" className="px-4 py-3 text-base font-bold text-[var(--color-text-main)] bg-indigo-500/5 text-center">{txMonth}</td></tr>); }
         currentMonth = txMonth; currentDay = null;
       }
       if (txDay !== currentDay) {
-        rows.push(<tr key={`day-${txDay}`} className="bg-[var(--color-bg-input)] border-b border-[var(--color-border)]"><td colSpan="6" className="px-4 py-1 text-xs text-[var(--color-text-muted)]">{txDay}</td></tr>);
+        rows.push(<tr key={`day-${txDay}`} className="bg-[var(--color-bg-input)] border-b border-[var(--color-border)]"><td colSpan="6" className="px-4 py-2 text-sm font-medium text-[var(--color-text-muted)]">{txDay}</td></tr>);
         currentDay = txDay;
       }
 
       const { mainCat, subCat } = getCategoryDetails(tx.categoryId); const Icon = subCat?.icon || mainCat?.icon || TagIcon; const isIncome = mainCat.type === 'income' || tx.amount > 0;
       rows.push(
         <tr key={tx.id} onClick={() => onTxClick(tx)} className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-card-hover)] transition-colors cursor-pointer text-[var(--color-text-main)]">
-          <td className="p-4 text-sm text-[var(--color-text-muted)] whitespace-nowrap">{tx.date}</td>
-          <td className="p-4 text-center"><div className={`w-8 h-8 rounded-lg inline-flex items-center justify-center ${mainCat.bg} ${mainCat.color}`}><Icon size={16} /></div></td>
-          <td className="p-4"><div className="flex items-center gap-2">{tx.description}{tx.installments && <span className="bg-indigo-500/10 text-indigo-500 text-[10px] px-1.5 py-0.5 rounded">תשלום {tx.installments.number}/{tx.installments.total}</span>}{tx.status === 'pending' && <span className="bg-orange-500/10 text-orange-500 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1"><Clock size={10}/> ממתין</span>}{tx.linkedTransactionId && <LinkIcon size={12} className="text-indigo-500"/>}</div>
-            {(tx.tags || tx.notes) && (<div className="flex gap-2 mt-1">{tx.tags && tx.tags.split(',').filter(t=>t.trim()).map(tag => <span key={tag} className="text-[10px] bg-[var(--color-bg-input)] border border-[var(--color-border)] text-[var(--color-text-muted)] px-1.5 py-0.5 rounded">{tag.trim()}</span>)}{tx.notes && <span className="text-[10px] bg-[var(--color-bg-input)] border border-[var(--color-border)] text-[var(--color-text-muted)] px-1.5 py-0.5 rounded flex items-center gap-1"><AlignLeft size={10}/> הערה</span>}</div>)}
+          <td className="p-4 text-base text-[var(--color-text-muted)] whitespace-nowrap">{tx.date}</td>
+          <td className="p-4 text-center"><div className={`w-10 h-10 rounded-xl inline-flex items-center justify-center ${mainCat.bg} ${mainCat.color}`}><Icon size={20} /></div></td>
+          <td className="p-4"><div className="flex items-center gap-2 text-base font-medium">{tx.description}{tx.installments && <span className="bg-indigo-500/10 text-indigo-500 text-xs px-2 py-0.5 rounded">תשלום {tx.installments.number}/{tx.installments.total}</span>}{tx.status === 'pending' && <span className="bg-orange-500/10 text-orange-500 text-xs px-2 py-0.5 rounded flex items-center gap-1"><Clock size={12}/> ממתין</span>}{tx.linkedTransactionId && <LinkIcon size={14} className="text-indigo-500"/>}</div>
+            {(tx.tags || tx.notes) && (<div className="flex gap-2 mt-1.5">{tx.tags && tx.tags.split(',').filter(t=>t.trim()).map(tag => <span key={tag} className="text-sm bg-[var(--color-bg-input)] border border-[var(--color-border)] text-[var(--color-text-muted)] px-2 py-0.5 rounded">{tag.trim()}</span>)}{tx.notes && <span className="text-sm bg-[var(--color-bg-input)] border border-[var(--color-border)] text-[var(--color-text-muted)] px-2 py-0.5 rounded flex items-center gap-1"><AlignLeft size={14}/> הערה</span>}</div>)}
           </td>
-          <td className="p-4 text-sm text-[var(--color-text-muted)]">{mainCat.type === 'income' ? mainCat.name : `${mainCat.name} • ${subCat?.name}`}</td>
-          <td className="p-4 text-sm text-[var(--color-text-muted)]">{getAccountName(tx.accountId || tx.account)}</td>
-          <td className={`p-4 text-center ${isIncome ? 'text-emerald-500' : ''}`} dir="ltr">{isIncome ? '+' : ''}{(tx.amount||0).toFixed(2)} ₪</td>
+          <td className="p-4 text-base text-[var(--color-text-muted)]">{mainCat.type === 'income' ? mainCat.name : `${mainCat.name} • ${subCat?.name}`}</td>
+          <td className="p-4 text-base text-[var(--color-text-muted)]">{getAccountName(tx.accountId || tx.account)}</td>
+          <td className={`p-4 text-center font-bold text-base ${isIncome ? 'text-emerald-500' : ''}`} dir="ltr">{isIncome ? '+' : ''}{(tx.amount||0).toFixed(2)} ₪</td>
         </tr>
       );
     });
@@ -530,14 +530,14 @@ function TransactionsView({ filteredTransactions, onTxClick, getCategoryDetails,
   return (
     <div className="animate-in fade-in duration-500 space-y-6">
       <div className="flex gap-2 w-full overflow-x-auto pb-2 hide-scrollbar">
-        <button onClick={() => setFilterType('all')} className={`px-5 py-1.5 rounded-xl text-sm transition-colors border ${filterType === 'all' ? 'bg-[var(--color-text-main)] text-[var(--color-bg-main)] border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הכל</button>
-        <button onClick={() => setFilterType('expense')} className={`px-5 py-1.5 rounded-xl text-sm transition-colors border ${filterType === 'expense' ? 'bg-[var(--color-text-main)] text-[var(--color-bg-main)] border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הוצאות בלבד</button>
-        <button onClick={() => setFilterType('income')} className={`px-5 py-1.5 rounded-xl text-sm transition-colors border ${filterType === 'income' ? 'bg-emerald-600 text-white border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הכנסות בלבד</button>
+        <button onClick={() => setFilterType('all')} className={`px-5 py-2 rounded-xl text-base transition-colors border ${filterType === 'all' ? 'bg-[var(--color-text-main)] text-[var(--color-bg-main)] border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הכל</button>
+        <button onClick={() => setFilterType('expense')} className={`px-5 py-2 rounded-xl text-base transition-colors border ${filterType === 'expense' ? 'bg-[var(--color-text-main)] text-[var(--color-bg-main)] border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הוצאות בלבד</button>
+        <button onClick={() => setFilterType('income')} className={`px-5 py-2 rounded-xl text-base transition-colors border ${filterType === 'income' ? 'bg-emerald-600 text-white border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הכנסות בלבד</button>
       </div>
       <NeonCard noPadding>
         <div className="overflow-x-auto">
           <table className="w-full text-right border-collapse min-w-[800px]">
-            <thead><tr className="bg-[var(--color-bg-input)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] text-sm"><th className="p-4 font-normal w-24">תאריך</th><th className="p-4 font-normal text-center w-12">סמל</th><th className="p-4 font-normal">שם העסק</th><th className="p-4 font-normal">קטגוריה</th><th className="p-4 font-normal">חשבון מחיוב</th><th className="p-4 font-normal text-center">סכום</th></tr></thead>
+            <thead><tr className="bg-[var(--color-bg-input)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] text-base"><th className="p-4 font-normal w-24">תאריך</th><th className="p-4 font-normal text-center w-12">סמל</th><th className="p-4 font-normal">שם העסק</th><th className="p-4 font-normal">קטגוריה</th><th className="p-4 font-normal">חשבון מחיוב</th><th className="p-4 font-normal text-center">סכום</th></tr></thead>
             <tbody>{renderGroupedRows()}</tbody>
           </table>
         </div>
@@ -551,6 +551,8 @@ function TransactionsView({ filteredTransactions, onTxClick, getCategoryDetails,
 // ==========================================
 function ReportsView({ filteredTransactions, getCategoryDetails, onViewTxClick, getAccountName }) {
   const [expandedMainCat, setExpandedMainCat] = useState(null);
+  
+  // כאן כלולים התיקונים של החישובים מהשלב הקודם!
   const incomes = filteredTransactions.filter(t => { 
     if (t.categoryId === 'misc_uncategorized') return t.amount > 0;
     const { mainCat } = getCategoryDetails(t.categoryId); 
@@ -563,8 +565,6 @@ function ReportsView({ filteredTransactions, getCategoryDetails, onViewTxClick, 
   });
 
   const totalIncome = incomes.reduce((sum, t) => sum + (t.amount || 0), 0);
-  // חשוב: השתמשנו כאן בחיסור. מאחר והוצאות מגיעות במינוס מהבנק, החיסור הופך אותן לפלוס בסך ההוצאות.
-  // לעומת זאת, החזרים חיוביים יחסרו מהסך הכולל (יקזזו את ההוצאה כראוי).
   const totalExpense = expenses.reduce((sum, t) => sum - (t.amount || 0), 0);
 
   const groupedExpenses = useMemo(() => {
@@ -572,9 +572,9 @@ function ReportsView({ filteredTransactions, getCategoryDetails, onViewTxClick, 
     expenses.forEach(t => {
       const { mainCat, subCat } = getCategoryDetails(t.categoryId);
       if (!grouped[mainCat.id]) grouped[mainCat.id] = { mainCat, amount: 0, subs: {} };
-      grouped[mainCat.id].amount += (t.amount || 0);
+      grouped[mainCat.id].amount -= (t.amount || 0); // חיסור של המינוס כדי לקבל פלוס או זיכוי
       if(!grouped[mainCat.id].subs[subCat.id]) grouped[mainCat.id].subs[subCat.id] = { subCat, amount: 0, txs: [] };
-      grouped[mainCat.id].subs[subCat.id].amount += (t.amount || 0);
+      grouped[mainCat.id].subs[subCat.id].amount -= (t.amount || 0);
       grouped[mainCat.id].subs[subCat.id].txs.push(t);
     });
     return Object.values(grouped).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
@@ -602,14 +602,32 @@ function ReportsView({ filteredTransactions, getCategoryDetails, onViewTxClick, 
               return (
                 <div key={item.mainCat.id}>
                   <button onClick={() => setExpandedMainCat(isExpanded ? null : item.mainCat.id)} className="w-full flex justify-between items-center p-5 hover:bg-[var(--color-bg-card-hover)] transition-colors group">
-                    <div className="flex items-center gap-4"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.mainCat.bg} transition-all`}><Icon size={18} className={item.mainCat.color} strokeWidth={1.5}/></div><span className="text-lg text-[var(--color-text-main)]">{item.mainCat.name}</span></div>
-                    <div className="flex items-center gap-3"><span className="text-lg text-[var(--color-text-main)]" dir="ltr">{(Math.abs(item.amount)||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span><ChevronDown size={18} className={`text-[var(--color-text-muted)] transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} /></div>
+                    <div className="flex items-center gap-4"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.mainCat.bg} transition-all`}><Icon size={18} className={item.mainCat.color} strokeWidth={1.5}/></div><span className="text-lg font-bold text-[var(--color-text-main)]">{item.mainCat.name}</span></div>
+                    <div className="flex items-center gap-3"><span className="text-lg font-bold text-[var(--color-text-main)]" dir="ltr">{(Math.abs(item.amount)||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span><ChevronDown size={18} className={`text-[var(--color-text-muted)] transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} /></div>
                   </button>
-                  <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[1000px]' : 'max-h-0'}`}>
+                  <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[1500px]' : 'max-h-0'}`}>
                     <div className="p-2 bg-[var(--color-bg-input)] border-t border-[var(--color-border)]">
                       {Object.values(item.subs).sort((a,b) => Math.abs(b.amount) - Math.abs(a.amount)).map(sub => {
                         const SubIcon = sub.subCat.icon || TagIcon;
-                        return (<div key={sub.subCat.id} className="p-3 rounded-lg hover:bg-[var(--color-bg-card)] transition-all group"><div className="flex justify-between items-center mb-2"><div className="flex items-center gap-3 text-[var(--color-text-main)]"><SubIcon size={16} className="text-[var(--color-text-muted)]" /><span className="text-sm">{sub.subCat.name}</span></div><span className="text-sm text-[var(--color-text-main)]" dir="ltr">{(Math.abs(sub.amount)||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span></div><div className="pl-8 pr-2 space-y-1">{sub.txs.map(tx => (<div key={tx.id} onClick={() => onViewTxClick(tx)} className="flex justify-between text-xs p-1.5 hover:bg-[var(--color-bg-input)] rounded cursor-pointer"><span className="text-[var(--color-text-muted)] truncate max-w-[150px]">{tx.description}</span><span dir="ltr" className="text-[var(--color-text-main)]">{(Math.abs(tx.amount)||0).toFixed(0)}₪</span></div>))}</div></div>)})}
+                        return (
+                          <div key={sub.subCat.id} className="p-3 rounded-lg hover:bg-[var(--color-bg-card)] transition-all group">
+                            <div className="flex justify-between items-center mb-2">
+                              <div className="flex items-center gap-3 text-[var(--color-text-main)]"><SubIcon size={18} className="text-[var(--color-text-muted)]" /><span className="text-base font-bold">{sub.subCat.name}</span></div>
+                              <span className="text-base font-bold text-[var(--color-text-main)]" dir="ltr">{(Math.abs(sub.amount)||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span>
+                            </div>
+                            <div className="pl-8 pr-2 space-y-2">
+                              {sub.txs.map(tx => (
+                                <div key={tx.id} onClick={() => onViewTxClick(tx)} className="flex justify-between text-sm p-2 hover:bg-[var(--color-bg-input)] rounded-lg cursor-pointer">
+                                  <span className="text-[var(--color-text-main)] truncate max-w-[150px] font-medium">{tx.description}</span>
+                                  <span dir="ltr" className={`font-bold ${tx.amount > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                    {tx.amount > 0 ? '+' : (tx.amount < 0 ? '-' : '')}{Math.abs(tx.amount||0).toFixed(0)} ₪
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 </div>
@@ -625,8 +643,17 @@ function ReportsView({ filteredTransactions, getCategoryDetails, onViewTxClick, 
               const Icon = item.mainCat.icon || TagIcon;
               return (
                 <div key={item.mainCat.id} className="w-full flex flex-col p-5 hover:bg-[var(--color-bg-card-hover)] transition-colors group border-b border-[var(--color-border)] last:border-0">
-                  <div className="flex justify-between items-center"><div className="flex items-center gap-4"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.mainCat.bg}`}><Icon size={18} className={item.mainCat.color} strokeWidth={1.5} /></div><span className="text-lg text-[var(--color-text-main)]">{item.mainCat.name}</span></div><span className="text-emerald-500 text-lg" dir="ltr">+{(item.amount||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span></div>
-                  <div className="mt-3 pl-14 pr-2 space-y-1">{item.txs.map(tx => (<div key={tx.id} onClick={() => onViewTxClick(tx)} className="flex justify-between text-xs p-1.5 hover:bg-[var(--color-bg-input)] rounded cursor-pointer"><span className="text-[var(--color-text-muted)] truncate max-w-[150px]">{tx.description}</span><span dir="ltr" className="text-emerald-500">+{(tx.amount||0).toFixed(0)}₪</span></div>))}</div>
+                  <div className="flex justify-between items-center"><div className="flex items-center gap-4"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.mainCat.bg}`}><Icon size={18} className={item.mainCat.color} strokeWidth={1.5} /></div><span className="text-lg font-bold text-[var(--color-text-main)]">{item.mainCat.name}</span></div><span className="text-emerald-500 text-lg font-bold" dir="ltr">+{(item.amount||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span></div>
+                  <div className="mt-4 pl-14 pr-2 space-y-2">
+                    {item.txs.map(tx => (
+                      <div key={tx.id} onClick={() => onViewTxClick(tx)} className="flex justify-between text-sm p-2 hover:bg-[var(--color-bg-input)] rounded-lg cursor-pointer">
+                        <span className="text-[var(--color-text-main)] truncate max-w-[150px] font-medium">{tx.description}</span>
+                        <span dir="ltr" className={`font-bold ${tx.amount > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          {tx.amount > 0 ? '+' : (tx.amount < 0 ? '-' : '')}{Math.abs(tx.amount||0).toFixed(0)} ₪
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })}
