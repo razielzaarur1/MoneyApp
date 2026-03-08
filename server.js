@@ -539,25 +539,28 @@ if (bot) {
             let totalIncome = 0; let totalExpense = 0;
             
             (txs || []).forEach(tx => {
-               const rawAmt = decryptData(tx.amount, botKey);
-               const rawCat = decryptData(tx.category, botKey) || '';
-               
-               if (!rawAmt || rawAmt.includes(':')) {
-                 console.log(`[TELEGRAM] ⚠️ Skipped calculating a transaction (Decryption failed/old key)`);
-                 return; 
-               }
-               
-               const amt = Math.abs(parseFloat(rawAmt) || 0);
-               
-               if (rawCat.startsWith('inc_')) {
-                 totalIncome += amt;
-               } else if (rawCat !== 'misc_uncategorized') {
-                 totalExpense += amt;
-               } else {
-                 const originalAmt = parseFloat(rawAmt) || 0;
-                 if (originalAmt > 0) totalIncome += Math.abs(originalAmt);
-                 else totalExpense += Math.abs(originalAmt);
-               }
+              const rawAmt = decryptData(tx.amount, botKey);
+              const rawCat = decryptData(tx.category, botKey) || '';
+              
+              if (!rawAmt || rawAmt.includes(':')) {
+                console.log(`[TELEGRAM] ⚠️ Skipped calculating a transaction (Decryption failed/old key)`);
+                return; 
+              }
+              
+              // משתמשים במספר המקורי במקום Math.abs כדי לשמור על סימן הכסף
+              const originalAmt = parseFloat(rawAmt) || 0;
+              
+              if (rawCat.startsWith('inc_')) {
+                totalIncome += originalAmt;
+              } else if (rawCat !== 'misc_uncategorized') {
+                // פחות כפול מינוס = פלוס. לכן מספר שלילי יגדיל את ההוצאות.
+                // אם שמנו 'הוצאה' על מספר חיובי (זיכוי), זה יקטין את ההוצאות.
+                totalExpense -= originalAmt;
+              } else {
+                // מצב ברירת מחדל בו לא ניתן סיווג למערכת
+                if (originalAmt > 0) totalIncome += originalAmt;
+                else totalExpense -= originalAmt;
+              }
             });
             
             const balance = totalIncome - totalExpense;

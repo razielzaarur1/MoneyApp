@@ -423,8 +423,17 @@ function MainApp({ onLogout }) {
 // ==========================================
 function OverviewView({ filteredTransactions, accounts, onTxClick, getCategoryDetails, getAccountName, transactions }) {
   const totalBalance = accounts.filter(a => a.type === 'bank').reduce((sum, a) => sum + Math.max(0, a.balance || 0), 0);
-  const monthIncome = filteredTransactions.reduce((sum, t) => { const { mainCat } = getCategoryDetails(t.categoryId); return (mainCat.type === 'income' || t.amount > 0) ? sum + (t.amount||0) : sum; }, 0);
-  const monthExpenses = filteredTransactions.reduce((sum, t) => { const { mainCat } = getCategoryDetails(t.categoryId); return (mainCat.type !== 'income' && t.amount < 0) ? sum + (t.amount||0) : sum; }, 0);
+  const monthIncome = filteredTransactions.reduce((sum, t) => { 
+    if (t.categoryId === 'misc_uncategorized') return t.amount > 0 ? sum + (t.amount||0) : sum;
+    const { mainCat } = getCategoryDetails(t.categoryId); 
+    return mainCat.type === 'income' ? sum + (t.amount||0) : sum; 
+  }, 0);
+
+  const monthExpenses = filteredTransactions.reduce((sum, t) => { 
+    if (t.categoryId === 'misc_uncategorized') return t.amount < 0 ? sum + (t.amount||0) : sum;
+    const { mainCat } = getCategoryDetails(t.categoryId); 
+    return mainCat.type !== 'income' ? sum + (t.amount||0) : sum; 
+  }, 0);
   const monthlyBalance = monthIncome - Math.abs(monthExpenses);
 
   const banks = accounts.filter(a => a.type === 'bank');
@@ -542,10 +551,21 @@ function TransactionsView({ filteredTransactions, onTxClick, getCategoryDetails,
 // ==========================================
 function ReportsView({ filteredTransactions, getCategoryDetails, onViewTxClick, getAccountName }) {
   const [expandedMainCat, setExpandedMainCat] = useState(null);
-  const incomes = filteredTransactions.filter(t => { const { mainCat } = getCategoryDetails(t.categoryId); return mainCat.type === 'income' || t.amount > 0; });
-  const expenses = filteredTransactions.filter(t => { const { mainCat } = getCategoryDetails(t.categoryId); return mainCat.type !== 'income' && t.amount < 0; });
+  const incomes = filteredTransactions.filter(t => { 
+    if (t.categoryId === 'misc_uncategorized') return t.amount > 0;
+    const { mainCat } = getCategoryDetails(t.categoryId); 
+    return mainCat.type === 'income'; 
+  });
+  const expenses = filteredTransactions.filter(t => { 
+    if (t.categoryId === 'misc_uncategorized') return t.amount < 0;
+    const { mainCat } = getCategoryDetails(t.categoryId); 
+    return mainCat.type !== 'income'; 
+  });
+
   const totalIncome = incomes.reduce((sum, t) => sum + (t.amount || 0), 0);
-  const totalExpense = expenses.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+  // חשוב: השתמשנו כאן בחיסור. מאחר והוצאות מגיעות במינוס מהבנק, החיסור הופך אותן לפלוס בסך ההוצאות.
+  // לעומת זאת, החזרים חיוביים יחסרו מהסך הכולל (יקזזו את ההוצאה כראוי).
+  const totalExpense = expenses.reduce((sum, t) => sum - (t.amount || 0), 0);
 
   const groupedExpenses = useMemo(() => {
     const grouped = {};
@@ -652,10 +672,17 @@ function AccountsView({ accounts, handleDeleteAccount, handleSyncAccount, onAddC
 }
 
 function BudgetView({ filteredTransactions, getCategoryDetails }) {
-  const expenses = filteredTransactions.filter(t => { const { mainCat } = getCategoryDetails(t.categoryId); return mainCat.type !== 'income' && t.amount < 0; });
-  const totalExpenses = expenses.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+  const expenses = filteredTransactions.filter(t => { 
+    if (t.categoryId === 'misc_uncategorized') return t.amount < 0;
+    const { mainCat } = getCategoryDetails(t.categoryId); 
+    return mainCat.type !== 'income'; 
+  });
+  const totalExpenses = expenses.reduce((sum, t) => sum - (t.amount || 0), 0);
   const budgetLimit = 8000; const percentage = Math.min(100, Math.round((totalExpenses / budgetLimit) * 100)) || 0;
-  const grouped = {}; expenses.forEach(t => { const { mainCat } = getCategoryDetails(t.categoryId); grouped[mainCat.id] = (grouped[mainCat.id] || 0) + Math.abs(t.amount || 0); });
+  const grouped = {}; expenses.forEach(t => { 
+    const { mainCat } = getCategoryDetails(t.categoryId); 
+    grouped[mainCat.id] = (grouped[mainCat.id] || 0) - (t.amount || 0); 
+  });
   const sortedCategories = Object.keys(grouped).map(catId => { const { mainCat } = getCategoryDetails(EXPENSES.find(e => e.id === catId)?.subs[0]?.id || ''); return { cat: mainCat, amount: grouped[catId], percent: Math.round((grouped[catId] / totalExpenses) * 100) || 0 }; }).sort((a, b) => b.amount - a.amount);
 
   return (
