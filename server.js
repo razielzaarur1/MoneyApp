@@ -531,15 +531,37 @@ if (bot) {
         db.get(`SELECT salt FROM users WHERE id = ?`, [userId], (err, user) => {
           if (!user) return;
           const botKey = crypto.pbkdf2Sync(process.env.SERVER_SECRET_KEY, user.salt, 100000, 32, 'sha256');
-          db.all(`SELECT amount, category FROM transactions WHERE userId = ? AND date LIKE ?`, [userId, `%/${new Date().getMonth() + 1}/${new Date().getFullYear()}`], (err, txs) => {
+          
+          const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+          const currentYear = new Date().getFullYear();
+
+          db.all(`SELECT amount, category FROM transactions WHERE userId = ? AND date LIKE ?`, [userId, `%/${currentMonth}/${currentYear}`], (err, txs) => {
             let totalIncome = 0; let totalExpense = 0;
+            
             (txs || []).forEach(tx => {
-               const amt = parseFloat(decryptData(tx.amount, botKey)) || 0;
-               const cat = decryptData(tx.category, botKey) || '';
-               if (cat.startsWith('inc_')) totalIncome += amt;
-               else totalExpense += amt;
+               const rawAmt = decryptData(tx.amount, botKey);
+               const rawCat = decryptData(tx.category, botKey) || '';
+               
+               if (!rawAmt || rawAmt.includes(':')) {
+                 console.log(`[TELEGRAM] ⚠️ Skipped calculating a transaction (Decryption failed/old key)`);
+                 return; 
+               }
+               
+               const amt = Math.abs(parseFloat(rawAmt) || 0);
+               
+               if (rawCat.startsWith('inc_')) {
+                 totalIncome += amt;
+               } else if (rawCat !== 'misc_uncategorized') {
+                 totalExpense += amt;
+               } else {
+                 const originalAmt = parseFloat(rawAmt) || 0;
+                 if (originalAmt > 0) totalIncome += Math.abs(originalAmt);
+                 else totalExpense += Math.abs(originalAmt);
+               }
             });
+            
             const balance = totalIncome - totalExpense;
+            console.log(`[TELEGRAM] 📊 Balance calculated: Inc: ${totalIncome}, Exp: ${totalExpense}`);
             const msg = `📊 *מאזן חודש נוכחי*\n\n💰 הכנסות: ₪${totalIncome.toFixed(2)}\n💸 הוצאות: ₪${totalExpense.toFixed(2)}\n\n⚖️ *מאזן: ₪${balance.toFixed(2)}*`;
             bot.sendMessage(chatId, msg, { parse_mode: 'Markdown', ...MAIN_KEYBOARD });
           });
@@ -601,18 +623,22 @@ if (bot) {
   });
 }
 
+
 // ==========================================
 // PART 11: BACKGROUND AUTO-SYNC & CRON
 // ==========================================
 async function runBackgroundSync(userId, chatId, isScheduled = true) {
   console.log(`\n==========================================`);
-  console.log(`[SYNC-ENGINE] 🚀 Starting Background Sync for User: ${userId}`);
+  console.log(`[SYNC-ENGINE] 🚀 Starting Background Sync for User: ${userId} (Scheduled: ${isScheduled})`);
   console.log(`==========================================`);
+  
+  if (chatId && bot && !isScheduled) bot.sendMessage(chatId, '⏳ סנכרון התחיל...', MAIN_KEYBOARD);
+
   try {
     const creds = await new Promise(res => credsDb.all('SELECT * FROM saved_credentials WHERE userId = ?', [userId], (err, rows) => res(rows || [])));
     if (creds.length === 0) {
       console.log(`[SYNC-ENGINE] ⚠️ No accounts configured in vault.`);
-      if (chatId && bot) bot.sendMessage(chatId, '❌ אין חשבונות שמורים במערכת.', MAIN_KEYBOARD);
+      if (chatId && bot && !isScheduled) bot.sendMessage(chatId, '❌ אין חשבונות שמורים במערכת.', MAIN_KEYBOARD);
       return;
     }
 
@@ -657,10 +683,15 @@ async function runBackgroundSync(userId, chatId, isScheduled = true) {
     }
 
     console.log(`[SYNC-ENGINE] 🏁 Sync Process Finished. Total New Txs: ${totalNewTx}`);
+    
     if (chatId && bot) {
-       if (!anySuccess) bot.sendMessage(chatId, '⚠️ הסנכרון הסתיים עם שגיאות.', MAIN_KEYBOARD);
-       else if (totalNewTx === 0) bot.sendMessage(chatId, isScheduled ? 'ℹ️ עדכון יומי: לא התקבלו תנועות חדשות היום.' : '✅ הסנכרון הסתיים. לא נמצאו תנועות חדשות.', MAIN_KEYBOARD);
-       else bot.sendMessage(chatId, `✅ הסנכרון הסתיים! נוספו ${totalNewTx} תנועות חדשות.`, MAIN_KEYBOARD);
+       if (totalNewTx > 0) {
+         bot.sendMessage(chatId, `✅ הסנכרון הסתיים! נוספו ${totalNewTx} תנועות חדשות.`, MAIN_KEYBOARD);
+       } 
+       else if (!isScheduled) {
+         if (!anySuccess) bot.sendMessage(chatId, '⚠️ הסנכרון הסתיים עם שגיאות.', MAIN_KEYBOARD);
+         else bot.sendMessage(chatId, '✅ הסנכרון הסתיים. לא נמצאו תנועות חדשות.', MAIN_KEYBOARD);
+       }
     }
   } catch (error) { 
     console.error(`[SYNC-ENGINE] ❌ Critical Sync Error:`, error); 
@@ -668,20 +699,17 @@ async function runBackgroundSync(userId, chatId, isScheduled = true) {
 }
 
 cron.schedule('* * * * *', () => {
-  const now = new Date();
-  const currentTimeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const formatter = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hour12: false });
+  const currentTimeString = formatter.format(new Date()); 
   
   db.all(`SELECT u.id as userId, s1.value as chatId, COALESCE(s2.value, '20:00') as syncTime FROM users u JOIN settings s1 ON u.id = s1.userId AND s1.key = 'telegram_chat_id' LEFT JOIN settings s2 ON u.id = s2.userId AND s2.key = 'sync_time'`, [], (err, users) => {
     if (!users) return;
-    let scheduledCount = 0;
     users.forEach(user => {
       if (user.syncTime === currentTimeString) {
-        scheduledCount++;
-        console.log(`[CRON] ⏰ Scheduled time hit (${currentTimeString}) for user ${user.userId}. Launching sync.`);
+        console.log(`[CRON] ⏰ Scheduled time hit (${currentTimeString} IL Time) for user ${user.userId}. Launching silent sync.`);
         runBackgroundSync(user.userId, user.chatId, true);
       }
     });
-    // console.log(`[CRON] Heartbeat ${currentTimeString} - Active configs checked.`); // (Optional, can be noisy)
   });
 });
 
@@ -727,7 +755,11 @@ app.post('/api/sync', requireAuth, async (req, res) => {
 
     if (scrapeResult.success) {
       console.log(`[API-SYNC] ✅ Scrape success. Saving data...`);
-      await saveScrapeResult(scrapeResult, companyId, mappings, durationInt, req.user.userId, req.user.masterKey);
+      // VITAL FIX: Encrypting with Bot Key so both site and telegram can read!
+      const userForSync = await new Promise(res => db.get(`SELECT salt FROM users WHERE id = ?`, [req.user.userId], (err, row) => res(row)));
+      const syncBotKey = crypto.pbkdf2Sync(process.env.SERVER_SECRET_KEY, userForSync.salt, 100000, 32, 'sha256');
+      
+      await saveScrapeResult(scrapeResult, companyId, mappings, durationInt, req.user.userId, syncBotKey);
       res.json({ success: true });
     } else {
       console.error(`[API-SYNC] ❌ Scrape Failed: ${scrapeResult.errorType}`);
@@ -763,7 +795,8 @@ app.post('/api/sync-all', requireAuth, async (req, res) => {
       try {
         const scrapeResult = await scraper.scrape({ id: decUser, username: decUser, password: decPass });
         if (scrapeResult.success) { 
-          await saveScrapeResult(scrapeResult, saved.companyId, mappings, durationInt, req.user.userId, req.user.masterKey); 
+          // VITAL FIX: Encrypting with Bot Key so both site and telegram can read!
+          await saveScrapeResult(scrapeResult, saved.companyId, mappings, durationInt, req.user.userId, botKey); 
           anySuccess = true; 
           console.log(`[API-SYNC-ALL] ✅ Completed ${saved.companyId}`);
         }

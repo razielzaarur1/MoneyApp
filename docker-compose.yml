@@ -5,9 +5,8 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=production
-      - TELEGRAM_BOT_TOKEN=8743736963:AAHZKs086pZ-SK9CimK9t9YHe7vyZ9zSfBg
-      # זה ה"חצי מפתח" של השרת - תמציא פה מחרוזת אקראית ארוכה באנגלית/מספרים!
-      - SERVER_SECRET_KEY=Raziel_Super_Secret_MoneyApp_987654321!@#
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - SERVER_SECRET_KEY=${SERVER_SECRET_KEY}
     volumes:
       - ./my_data_folder:/app/data     
       - ./my_secrets_folder:/app/secrets 
