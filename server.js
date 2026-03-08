@@ -463,6 +463,28 @@ app.post('/api/link-transactions', requireAuth, (req, res) => {
   });
 });
 
+app.post('/api/add-transaction', requireAuth, (req, res) => {
+  const { date, description, categoryId, amount, accountId, notes, type } = req.body;
+  console.log(`[API] ➕ Adding manual transaction: ${description}`);
+  
+  let finalAmount = parseFloat(amount) || 0;
+  if (type === 'expense' && finalAmount > 0) finalAmount = -finalAmount;
+  if (type === 'income' && finalAmount < 0) finalAmount = Math.abs(finalAmount);
+
+  const hash = `manual-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  const encAmount = encryptData(String(finalAmount), req.user.masterKey);
+  const encDesc = encryptData(description, req.user.masterKey);
+  const encCategory = encryptData(categoryId, req.user.masterKey);
+  const encNotes = encryptData(notes || '', req.user.masterKey);
+  const encOriginalCategory = encryptData('manual', req.user.masterKey);
+
+  db.run(`INSERT INTO transactions (hash, userId, date, description, category, amount, account, status, originalCategory, billingDate, notes, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [hash, req.user.userId, date, encDesc, encCategory, encAmount, accountId, 'completed', encOriginalCategory, date, encNotes, ''], function(err) {
+      if (err) return res.status(500).json({ success: false, error: err.message });
+      res.json({ success: true, transactionId: this.lastID });
+  });
+});
+
 // ==========================================
 // PART 10: TELEGRAM CALLBACKS & LISTENER
 // ==========================================

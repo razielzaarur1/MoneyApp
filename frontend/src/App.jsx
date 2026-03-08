@@ -234,6 +234,7 @@ function MainApp({ onLogout }) {
   const [editingAccount, setEditingAccount] = useState(null);
   const [syncModalType, setSyncModalType] = useState(null);
   const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
+  const [isAddTxModalOpen, setIsAddTxModalOpen] = useState(false);
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
@@ -297,6 +298,14 @@ function MainApp({ onLogout }) {
     try { await authFetch('/api/update-transaction', { method: 'POST', body: JSON.stringify(txData) }); fetchData(); } catch (error) {}
     setSelectedTx(null); setSelectedViewTx(null);
   };
+
+  const handleAddManualTransaction = async (txData) => {
+    try { 
+      await authFetch('/api/add-transaction', { method: 'POST', body: JSON.stringify(txData) }); 
+      fetchData(); 
+      showToast('התנועה נוספה בהצלחה', 'success'); 
+    } catch (error) { showToast('שגיאה בהוספת תנועה', 'error'); }
+  };
   
   const handleLinkTransactions = async (txId1, txId2) => {
     try { await authFetch('/api/link-transactions', { method: 'POST', body: JSON.stringify({ txId1, txId2 }) }); fetchData(); } catch (error) {}
@@ -314,7 +323,6 @@ function MainApp({ onLogout }) {
     }
   };
 
-  // התיקון: מעבירים את המזהה המלא לשרת במקום לנסות לחתוך אותו כאן
   const handleSyncAccount = async (accountId) => {
     setIsSyncingAll(true); showToast('מסנכרן חשבון נבחר...', 'info');
     try {
@@ -331,13 +339,17 @@ function MainApp({ onLogout }) {
     setEditingAccount(null);
   };
 
-  const getAccountName = (accId) => accounts.find(a => a.id === accId)?.name || accId;
+  // תמיכה בחיפוש שם לארנק וירטואלי
+  const getAccountName = (accId) => {
+    if (accId === 'wallet') return 'ארנק (מזומן)';
+    return accounts.find(a => a.id === accId)?.name || accId;
+  };
 
   const sharedProps = {
     transactions, filteredTransactions, accounts, getCategoryDetails, selectedMonth, setSelectedMonth, availableMonths, 
     allExistingTags, appSettings, handleUpdateSetting, theme, toggleTheme, onTxClick: setSelectedTx, getAccountName, 
     handleLinkTransactions, setEditingAccount, onAddClick: setSyncModalType, handleDeleteAccount, handleSyncAccount, getCustomMonthYear, onViewTxClick: setSelectedViewTx,
-    handleDeleteUser, setIsChangePassModalOpen, showToast
+    handleDeleteUser, setIsChangePassModalOpen, showToast, onAddManualTx: () => setIsAddTxModalOpen(true)
   };
 
   const NAV_ITEMS = [
@@ -414,10 +426,13 @@ function MainApp({ onLogout }) {
         {editingAccount && <EditAccountModal account={editingAccount} onClose={() => setEditingAccount(null)} onSave={handleEditAccountSubmit} />}
         {syncModalType && <SyncModal type={syncModalType} scrapeDuration={appSettings.scrape_duration} onClose={() => setSyncModalType(null)} onSuccess={() => { setSyncModalType(null); fetchData(); }} />}
         {isChangePassModalOpen && <ChangePasswordModal onClose={() => setIsChangePassModalOpen(false)} showToast={showToast} />}
+        {isAddTxModalOpen && <AddTransactionModal accounts={accounts} onClose={() => setIsAddTxModalOpen(false)} onSave={handleAddManualTransaction} getCategoryDetails={getCategoryDetails} />}
       </div>
     </>
   );
 }
+
+
 // ==========================================
 // PART 6: OVERVIEW VIEW
 // ==========================================
@@ -485,7 +500,7 @@ function OverviewView({ filteredTransactions, accounts, onTxClick, getCategoryDe
 // ==========================================
 // PART 7: TRANSACTIONS VIEW
 // ==========================================
-function TransactionsView({ filteredTransactions, onTxClick, getCategoryDetails, getAccountName, appSettings, getCustomMonthYear }) {
+function TransactionsView({ filteredTransactions, onTxClick, getCategoryDetails, getAccountName, appSettings, getCustomMonthYear, onAddManualTx }) {
   const [filterType, setFilterType] = useState('all'); 
   const displayedTxs = useMemo(() => {
     let txs = filteredTransactions;
@@ -529,10 +544,15 @@ function TransactionsView({ filteredTransactions, onTxClick, getCategoryDetails,
 
   return (
     <div className="animate-in fade-in duration-500 space-y-6">
-      <div className="flex gap-2 w-full overflow-x-auto pb-2 hide-scrollbar">
-        <button onClick={() => setFilterType('all')} className={`px-5 py-2 rounded-xl text-base transition-colors border ${filterType === 'all' ? 'bg-[var(--color-text-main)] text-[var(--color-bg-main)] border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הכל</button>
-        <button onClick={() => setFilterType('expense')} className={`px-5 py-2 rounded-xl text-base transition-colors border ${filterType === 'expense' ? 'bg-[var(--color-text-main)] text-[var(--color-bg-main)] border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הוצאות בלבד</button>
-        <button onClick={() => setFilterType('income')} className={`px-5 py-2 rounded-xl text-base transition-colors border ${filterType === 'income' ? 'bg-emerald-600 text-white border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הכנסות בלבד</button>
+      <div className="flex flex-col sm:flex-row gap-3 w-full justify-between items-start sm:items-center">
+        <div className="flex gap-2 w-full overflow-x-auto pb-2 hide-scrollbar">
+          <button onClick={() => setFilterType('all')} className={`px-5 py-2 rounded-xl text-base transition-colors border ${filterType === 'all' ? 'bg-[var(--color-text-main)] text-[var(--color-bg-main)] border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הכל</button>
+          <button onClick={() => setFilterType('expense')} className={`px-5 py-2 rounded-xl text-base transition-colors border ${filterType === 'expense' ? 'bg-[var(--color-text-main)] text-[var(--color-bg-main)] border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הוצאות בלבד</button>
+          <button onClick={() => setFilterType('income')} className={`px-5 py-2 rounded-xl text-base transition-colors border ${filterType === 'income' ? 'bg-emerald-600 text-white border-transparent' : 'bg-[var(--color-bg-card)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הכנסות בלבד</button>
+        </div>
+        <button onClick={onAddManualTx} className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-indigo-500 transition-colors shrink-0 shadow-lg">
+          <Plus size={16}/> הוסף תנועה ידנית
+        </button>
       </div>
       <NeonCard noPadding>
         <div className="overflow-x-auto">
@@ -545,7 +565,6 @@ function TransactionsView({ filteredTransactions, onTxClick, getCategoryDetails,
     </div>
   );
 }
-
 // ==========================================
 // PART 8: REPORTS VIEW
 // ==========================================
@@ -772,7 +791,7 @@ function SettingsView({ appSettings, handleUpdateSetting, theme, toggleTheme, ha
 
 
 // ==========================================
-// PART 10: MODALS & FINAL EXPORT (החלק האחרון בקובץ App.jsx!)
+// PART 10: MODALS & FINAL EXPORT 
 // ==========================================
 function TransactionViewModal({ tx, getCategoryDetails, getAccountName, onClose, onEdit }) {
   const { mainCat, subCat } = getCategoryDetails(tx.categoryId);
@@ -834,10 +853,13 @@ function TransactionModal({ tx, getCategoryDetails, accounts, transactions, onCl
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-6">
       <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-border)] w-full max-w-5xl rounded-3xl shadow-2xl flex flex-col md:flex-row max-h-[95vh] overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="w-full md:w-1/2 flex flex-col border-l border-[var(--color-border)] bg-[var(--color-bg-main)]">
+      {/* פתרון הגלילה: הגדרת גובה h-[90vh] או md:h-[85vh] לחלון עצמו, מה שמכריח את הגלילה הפנימית לעבוד */}
+      <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-border)] w-full max-w-5xl rounded-3xl shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-[85vh] overflow-hidden animate-in zoom-in-95 duration-200">
+        
+        {/* צד ימין - פירוט התנועה */}
+        <div className="w-full md:w-1/2 flex flex-col border-l border-[var(--color-border)] bg-[var(--color-bg-main)] h-1/2 md:h-full overflow-hidden">
           <div className="p-6 flex justify-between items-start bg-[var(--color-bg-card)] border-b border-[var(--color-border)] shrink-0"><button onClick={onClose} className="p-2 bg-[var(--color-bg-input)] rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"><X size={20} /></button><div className="text-right flex-1 mr-4"><h3 className="text-xl text-[var(--color-text-main)] font-bold">{tx.description}</h3><p className="text-sm text-[var(--color-text-muted)] mt-1">{acc?.name || tx.account}</p></div></div>
-          <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+          <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">
             <div className="text-center"><p className={`text-5xl font-black ${tx.amount < 0 ? 'text-[var(--color-text-main)]' : 'text-emerald-500'}`} dir="ltr">{tx.amount > 0 ? '+' : ''}{(tx.amount||0).toLocaleString(undefined, {minimumFractionDigits: 2})} <span className="text-2xl opacity-50">₪</span></p></div>
             <div className="grid grid-cols-2 gap-4"><div className="bg-[var(--color-bg-input)] p-4 rounded-xl text-center"><p className="text-xs text-[var(--color-text-muted)] mb-1">תאריך עסקה</p><p className="text-[var(--color-text-main)] font-bold">{tx.date}</p></div><div className="bg-[var(--color-bg-input)] p-4 rounded-xl text-center"><p className="text-xs text-[var(--color-text-muted)] mb-1">תאריך חיוב</p><p className="text-[var(--color-text-main)] font-bold">{tx.billingDate}</p></div></div>
             <div className="bg-indigo-500/5 p-5 rounded-2xl border border-indigo-500/10">
@@ -853,14 +875,107 @@ function TransactionModal({ tx, getCategoryDetails, accounts, transactions, onCl
           </div>
           <div className="p-6 shrink-0 bg-[var(--color-bg-card)] border-t border-[var(--color-border)]"><button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-lg py-3 rounded-xl font-bold shadow-lg">שמור שינויים</button></div>
         </div>
-        <div className="w-full md:w-1/2 flex flex-col bg-[var(--color-bg-card)] h-full max-h-[50vh] md:max-h-full">
+
+        {/* צד שמאל - בחירת קטגוריה (עם פתרון הגלילה) */}
+        <div className="w-full md:w-1/2 flex flex-col bg-[var(--color-bg-card)] h-1/2 md:h-full overflow-hidden">
           <div className="flex bg-[var(--color-bg-input)] border-b border-[var(--color-border)] p-2 shrink-0"><button onClick={() => { setActiveTabType('expense'); setView('main'); }} className={`flex-1 py-3 text-center text-sm font-bold rounded-xl transition-all ${activeTabType === 'expense' ? 'bg-[var(--color-bg-card)] text-[var(--color-text-main)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הוצאות</button><button onClick={() => { setActiveTabType('income'); setView('main'); }} className={`flex-1 py-3 text-center text-sm font-bold rounded-xl transition-all ${activeTabType === 'income' ? 'bg-[var(--color-bg-card)] text-[var(--color-text-main)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הכנסות</button></div>
-          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar min-h-0">
             {activeTabType === 'income' ? (<div className="grid grid-cols-2 gap-3">{INCOMES.map(cat => { const Icon = cat.icon || TagIcon; const isSelected = selectedSubCatId === cat.id; return (<button key={cat.id} onClick={() => setSelectedSubCatId(cat.id)} className={`flex flex-col items-center p-4 rounded-xl border transition-all ${isSelected ? 'border-emerald-500 bg-emerald-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-emerald-500'}`}><Icon size={24} className={`mb-2 ${cat.color}`} strokeWidth={1.5} /><span className="text-sm font-medium text-[var(--color-text-main)] text-center">{cat.name}</span></button>)})}</div>) : view === 'main' ? (<div className="grid grid-cols-2 gap-3">{EXPENSES.map(mainCat => { const Icon = mainCat.icon || TagIcon; const isSelected = selectedMainCatObj.id === mainCat.id; return (<button key={mainCat.id} onClick={() => { setSelectedMainCatObj(mainCat); setView('sub'); }} className={`flex flex-col items-center p-4 rounded-xl border transition-all ${isSelected ? 'border-indigo-500 bg-indigo-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-indigo-500'}`}><Icon size={24} className={`mb-2 ${mainCat.color}`} strokeWidth={1.5} /><span className="text-sm font-medium text-[var(--color-text-main)] text-center">{mainCat.name}</span></button>)})}</div>) : (<div><div className="flex items-center justify-between mb-4 sticky top-0 bg-[var(--color-bg-card)] z-10 py-2 border-b border-[var(--color-border)]"><h4 className="text-lg font-bold text-[var(--color-text-main)] flex items-center gap-2">{React.createElement(selectedMainCatObj.icon || TagIcon, { size: 20, className: selectedMainCatObj.color })} {selectedMainCatObj.name}</h4><button onClick={() => setView('main')} className="text-sm text-[var(--color-text-muted)] flex items-center hover:text-[var(--color-text-main)]">חזור <ChevronRight size={16} /></button></div><div className="grid grid-cols-2 gap-3 pb-8">{selectedMainCatObj.subs.map(sub => { const SubIcon = sub.icon || TagIcon; const isSelected = selectedSubCatId === sub.id; return (<button key={sub.id} onClick={() => setSelectedSubCatId(sub.id)} className={`flex flex-col items-center justify-center p-4 border rounded-xl transition-all ${isSelected ? 'border-indigo-500 bg-indigo-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-indigo-500'}`}><SubIcon size={24} className={`mb-2 ${isSelected ? 'text-indigo-600' : 'text-[var(--color-text-muted)]'}`} strokeWidth={1.5} /><span className="text-sm font-medium text-center text-[var(--color-text-main)]">{sub.name}</span></button>);})}</div></div>)}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function AddTransactionModal({ accounts, onClose, onSave, getCategoryDetails }) {
+  const todayStr = `${String(new Date().getDate()).padStart(2, '0')}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${new Date().getFullYear()}`;
+  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState('');
+  const [date, setDate] = useState(todayStr);
+  
+  // הגדרת "ארנק (מזומן)" כברירת המחדל האוטומטית לתנועות ידניות
+  const [accountId, setAccountId] = useState('wallet');
+  
+  const [notes, setNotes] = useState('');
+  const [type, setType] = useState('expense');
+  const [selectedSubCatId, setSelectedSubCatId] = useState('misc_uncategorized');
+  
+  const [view, setView] = useState('main'); 
+  const [selectedMainCatObj, setSelectedMainCatObj] = useState(EXPENSES[0]);
+
+  const handleSave = (e) => {
+     e.preventDefault();
+     if (!description || !amount || !accountId) return;
+     onSave({ description, amount, date, accountId, notes, categoryId: selectedSubCatId, type });
+     onClose();
+  };
+
+  return (
+     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-6">
+       <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={onClose}></div>
+       {/* פתרון הגלילה כמו בפופ-אפ הקודם: h-[90vh] md:h-[85vh] */}
+       <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-border)] w-full max-w-5xl rounded-3xl shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-[85vh] overflow-hidden animate-in zoom-in-95 duration-200">
+         
+         {/* צד ימין במסך - טופס הרישום (סודר כפי שביקשת) */}
+         <div className="w-full md:w-1/2 flex flex-col bg-[var(--color-bg-main)] border-l border-[var(--color-border)] h-1/2 md:h-full overflow-hidden">
+            <div className="p-6 flex justify-between items-center bg-[var(--color-bg-card)] border-b border-[var(--color-border)] shrink-0">
+              <h3 className="text-xl text-[var(--color-text-main)] font-bold">הוספת תנועה ידנית</h3>
+              <button type="button" onClick={onClose} className="p-2 bg-[var(--color-bg-input)] rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSave} className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1 min-h-0">
+               <div><label className="text-sm font-bold text-[var(--color-text-muted)] block mb-1">שם העסק / תיאור</label><input type="text" required value={description} onChange={e=>setDescription(e.target.value)} className="w-full p-3 bg-[var(--color-bg-input)] text-[var(--color-text-main)] border border-[var(--color-border)] rounded-xl outline-none" placeholder="לדוגמה: מזומן מהכספומט" /></div>
+               <div className="flex gap-4">
+                 <div className="flex-1"><label className="text-sm font-bold text-[var(--color-text-muted)] block mb-1">סכום (₪)</label><input type="number" step="0.01" min="0" required value={amount} onChange={e=>setAmount(e.target.value)} className="w-full p-3 bg-[var(--color-bg-input)] text-[var(--color-text-main)] border border-[var(--color-border)] rounded-xl outline-none text-left" dir="ltr" placeholder="0.00" /></div>
+                 <div className="flex-1"><label className="text-sm font-bold text-[var(--color-text-muted)] block mb-1">תאריך</label><input type="text" required value={date} onChange={e=>setDate(e.target.value)} className="w-full p-3 bg-[var(--color-bg-input)] text-[var(--color-text-main)] border border-[var(--color-border)] rounded-xl outline-none text-center" dir="ltr" /></div>
+               </div>
+               <div>
+                 <label className="text-sm font-bold text-[var(--color-text-muted)] block mb-1">חשבון מחיוב / מזוכֶּה</label>
+                 <select required value={accountId} onChange={e=>setAccountId(e.target.value)} className="w-full p-3 bg-[var(--color-bg-input)] text-[var(--color-text-main)] border border-[var(--color-border)] rounded-xl outline-none">
+                    <option value="wallet">ארנק (מזומן)</option>
+                    {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                 </select>
+               </div>
+               <div><label className="text-sm font-bold text-[var(--color-text-muted)] block mb-1">הערות (אופציונלי)</label><textarea value={notes} onChange={e=>setNotes(e.target.value)} rows="2" className="w-full p-3 bg-[var(--color-bg-input)] text-[var(--color-text-main)] border border-[var(--color-border)] rounded-xl outline-none resize-none"></textarea></div>
+               
+               <div className="mt-4 bg-[var(--color-bg-card)] p-4 rounded-xl border border-[var(--color-border)] flex items-center justify-between">
+                 <span className="text-sm text-[var(--color-text-muted)] font-bold">סיווג נבחר:</span>
+                 <span className={`text-sm font-bold ${type === 'income' ? 'text-emerald-500' : 'text-indigo-500'}`}>
+                   {getCategoryDetails(selectedSubCatId)?.subCat?.name || (type === 'income' ? 'הכנסה כללית' : 'ללא סיווג')}
+                 </span>
+               </div>
+               
+               <button type="submit" className={`w-full text-white text-lg py-3 rounded-xl font-bold shadow-lg mt-4 transition-colors ${type === 'income' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-indigo-600 hover:bg-indigo-500'}`}>שמור תנועה</button>
+            </form>
+         </div>
+
+         {/* צד שמאל במסך - הקטגוריות */}
+         <div className="w-full md:w-1/2 flex flex-col bg-[var(--color-bg-card)] h-1/2 md:h-full overflow-hidden">
+            <div className="flex bg-[var(--color-bg-input)] border-b border-[var(--color-border)] p-2 shrink-0">
+               <button type="button" onClick={() => { setType('expense'); setView('main'); setSelectedSubCatId('misc_uncategorized'); }} className={`flex-1 py-3 text-center text-sm font-bold rounded-xl transition-all ${type === 'expense' ? 'bg-[var(--color-bg-card)] text-[var(--color-text-main)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הוצאות</button>
+               <button type="button" onClick={() => { setType('income'); setView('main'); setSelectedSubCatId('inc_misc'); }} className={`flex-1 py-3 text-center text-sm font-bold rounded-xl transition-all ${type === 'income' ? 'bg-[var(--color-bg-card)] text-[var(--color-text-main)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הכנסות</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar min-h-0">
+              {type === 'income' ? (
+                <div className="grid grid-cols-2 gap-3">
+                   {INCOMES.map(cat => { const Icon = cat.icon || TagIcon; const isSelected = selectedSubCatId === cat.id; return (<button type="button" key={cat.id} onClick={() => setSelectedSubCatId(cat.id)} className={`flex flex-col items-center p-4 rounded-xl border transition-all ${isSelected ? 'border-emerald-500 bg-emerald-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-emerald-500'}`}><Icon size={24} className={`mb-2 ${cat.color}`} strokeWidth={1.5} /><span className="text-sm font-medium text-[var(--color-text-main)] text-center">{cat.name}</span></button>)})}
+                </div>
+              ) : view === 'main' ? (
+                <div className="grid grid-cols-2 gap-3">
+                   {EXPENSES.map(mainCat => { const Icon = mainCat.icon || TagIcon; const isSelected = selectedMainCatObj.id === mainCat.id; return (<button type="button" key={mainCat.id} onClick={() => { setSelectedMainCatObj(mainCat); setView('sub'); }} className={`flex flex-col items-center p-4 rounded-xl border transition-all ${isSelected ? 'border-indigo-500 bg-indigo-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-indigo-500'}`}><Icon size={24} className={`mb-2 ${mainCat.color}`} strokeWidth={1.5} /><span className="text-sm font-medium text-[var(--color-text-main)] text-center">{mainCat.name}</span></button>)})}
+                </div>
+              ) : (
+                <div>
+                   <div className="flex items-center justify-between mb-4 sticky top-0 bg-[var(--color-bg-card)] z-10 py-2 border-b border-[var(--color-border)]"><h4 className="text-lg font-bold text-[var(--color-text-main)] flex items-center gap-2">{React.createElement(selectedMainCatObj.icon || TagIcon, { size: 20, className: selectedMainCatObj.color })} {selectedMainCatObj.name}</h4><button type="button" onClick={() => setView('main')} className="text-sm text-[var(--color-text-muted)] flex items-center hover:text-[var(--color-text-main)]">חזור <ChevronRight size={16} /></button></div>
+                   <div className="grid grid-cols-2 gap-3 pb-8">
+                     {selectedMainCatObj.subs.map(sub => { const SubIcon = sub.icon || TagIcon; const isSelected = selectedSubCatId === sub.id; return (<button type="button" key={sub.id} onClick={() => setSelectedSubCatId(sub.id)} className={`flex flex-col items-center justify-center p-4 border rounded-xl transition-all ${isSelected ? 'border-indigo-500 bg-indigo-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-indigo-500'}`}><SubIcon size={24} className={`mb-2 ${isSelected ? 'text-indigo-600' : 'text-[var(--color-text-muted)]'}`} strokeWidth={1.5} /><span className="text-sm font-medium text-center text-[var(--color-text-main)]">{sub.name}</span></button>);})}
+                   </div>
+                </div>
+              )}
+            </div>
+         </div>
+       </div>
+     </div>
   );
 }
 
