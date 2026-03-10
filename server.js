@@ -35,7 +35,7 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
   console.log(`[TELEGRAM] ⚠️ No Bot Token found. Telegram features are disabled.`);
 }
 
-// מיפוי אייקונים (Lucide) לאימוג'ים כדי שהתפריט בטלגרם יישאר צבעוני
+// מיפוי אייקונים
 const ICON_TO_EMOJI = {
   "Wallet": "💼", "Landmark": "🏛️", "Home": "🏠", "Briefcase": "👔", "TrendingUp": "📈", 
   "MoreHorizontal": "➕", "Tv": "📺", "Key": "🔑", "Users": "👥", "Droplet": "💧", 
@@ -53,7 +53,6 @@ const ICON_TO_EMOJI = {
 };
 const getEmoji = (icon) => ICON_TO_EMOJI[icon] || '🔹';
 
-// פונקציה שקוראת את הקטגוריות ישירות מקובץ ה-JSON (כך שלא צריך להפעיל מחדש את השרת כשמוסיפים קטגוריה!)
 function getBotCategories() {
   try {
     const catData = JSON.parse(fs.readFileSync(path.join(__dirname, 'categories.json'), 'utf8'));
@@ -79,7 +78,7 @@ const pendingStates = new Map();
 
 const getTxKeyboard = (step, txId, extraData = null) => {
   let keyboard = [];
-  const cats = getBotCategories(); // קריאת הקטגוריות המעודכנות ביותר
+  const cats = getBotCategories(); 
 
   if (step === 'main') {
     keyboard = [
@@ -104,7 +103,6 @@ const getTxKeyboard = (step, txId, extraData = null) => {
   else if (step === 'exp') {
     let row = [];
     cats.expenses.forEach((cat, i) => {
-      // כפתור לקטגוריית אב שמוביל לתתי-קטגוריות (subs)
       row.push({ text: `${getEmoji(cat.icon)} ${cat.name}`, callback_data: `subs_${txId}_${cat.id}` });
       if (row.length === 2 || i === cats.expenses.length - 1) { keyboard.push(row); row = []; }
     });
@@ -157,7 +155,6 @@ function decryptData(encText, keyBuffer) {
     decrypted += decipher.final('utf8');
     return decrypted;
   } catch (e) { 
-    // console.error(`[CRYPTO] ⚠️ Decryption failed for a string (might be normal if split-key used)`);
     return encText; 
   } 
 }
@@ -178,7 +175,12 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS merchant_categories (merchant TEXT PRIMARY KEY, categoryId TEXT)`);
   db.run(`CREATE TABLE IF NOT EXISTS settings (key TEXT, userId TEXT, value TEXT, PRIMARY KEY(key, userId))`);
   
+  // תיקון קריטי: הוספת עמודות חדשות למסד נתונים קיים, למניעת שגיאת "לא הצלחנו לעדכן"
   db.run(`ALTER TABLE transactions ADD COLUMN userId TEXT`, (err) => {});
+  db.run(`ALTER TABLE transactions ADD COLUMN notes TEXT`, (err) => {});
+  db.run(`ALTER TABLE transactions ADD COLUMN tags TEXT`, (err) => {});
+  db.run(`ALTER TABLE transactions ADD COLUMN linkedTransactionId INTEGER`, (err) => {});
+  
   db.run(`ALTER TABLE accounts ADD COLUMN userId TEXT`, (err) => {});
   db.run(`ALTER TABLE accounts ADD COLUMN scrapeDuration INTEGER`, (err) => {});
 });
@@ -300,32 +302,49 @@ async function saveScrapeResult(scrapeResult, companyId, mappings, scrapeDuratio
     });
 
     for (const tx of acc.txns) {
-      const hash = `${accId}-${tx.date}-${tx.chargedAmount}-${tx.description}`;
-      const exists = await new Promise(res => db.get(`SELECT id FROM transactions WHERE hash = ?`, [hash], (err, row) => res(row)));
-      if (exists) continue; 
+      const effectiveAmount = (tx.chargedAmount === 0 || !tx.chargedAmount) ? (tx.originalAmount || 0) : tx.chargedAmount;
+      const txDate = formatILDate(tx.date); 
+      const status = tx.status || 'completed';
+
+      // הגנה חכמה מפני כפילויות - מחפש גם עסקאות שנשמרו בעבר כ-0 ש"ח או בלי מזהה יציב
+      const hashOld1 = `${accId}-${tx.date}-${tx.chargedAmount}-${tx.description}`; 
+      const hashOld2 = `${accId}-${tx.date}-${effectiveAmount}-${tx.description}`;  
+      const hashWithZero = `${accId}-${tx.date}-0-${tx.description}`; 
+      const hashNew = tx.identifier ? `${accId}-${tx.identifier}` : hashOld2;       
+
+      const exists = await new Promise(res => db.get(`SELECT id, status FROM transactions WHERE hash IN (?, ?, ?, ?)`, [hashNew, hashOld1, hashOld2, hashWithZero], (err, row) => res(row)));
+      
+      if (exists) {
+        // אם העסקה נמצאה (אפילו כישנה), מעדכן אותה ודורס את הכפילות במקום ליצור חדשה
+        if (exists.status === 'pending' || hashNew !== hashOld1 || hashNew !== hashWithZero) {
+            const encAmount = encryptData(String(effectiveAmount), masterKey);
+            await new Promise(resolve => {
+                db.run(`UPDATE transactions SET status = ?, amount = ?, hash = ? WHERE id = ?`, 
+                    [status, encAmount, hashNew, exists.id], () => resolve());
+            });
+        }
+        continue;
+      }
 
       newTxCount++;
-      const txDate = formatILDate(tx.date); 
       const billingDate = tx.processedDate ? formatILDate(tx.processedDate) : txDate;
       const category = mappings[tx.description] || guessCategory(tx.category, tx.description);
       const installmentsStr = tx.installments ? JSON.stringify(tx.installments) : null;
-      const status = tx.status || 'completed';
 
-      const encAmount = encryptData(String(tx.chargedAmount), masterKey);
+      const encAmount = encryptData(String(effectiveAmount), masterKey);
       const encDesc = encryptData(tx.description, masterKey);
       const encCategory = encryptData(category, masterKey);
       const encOriginalCategory = encryptData(tx.category || '', masterKey);
 
       const txId = await new Promise((resolve) => {
         db.run(`INSERT INTO transactions (hash, userId, date, description, category, amount, account, status, installments, originalCategory, billingDate, notes, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [hash, userId, txDate, encDesc, encCategory, encAmount, accId, status, installmentsStr, encOriginalCategory, billingDate, '', ''], function() { resolve(this.lastID); });
+          [hashNew, userId, txDate, encDesc, encCategory, encAmount, accId, status, installmentsStr, encOriginalCategory, billingDate, '', ''], function() { resolve(this.lastID); });
       });
 
-      console.log(`[DB-SAVE] ✨ New Transaction saved: ${tx.description} | Amount: ${tx.chargedAmount} | Cat: ${category}`);
+      console.log(`[DB-SAVE] ✨ New Transaction saved: ${tx.description} | Amount: ${effectiveAmount} | Cat: ${category}`);
 
       if (userChatId && bot && status !== 'pending') {
-        const messageText = `💳 *תנועה חדשה!*\n====================\n🏪 *עסק:* ${tx.description}\n💰 *סכום:* ₪${tx.chargedAmount}\n📅 *תאריך:* ${txDate}\n🏦 *חשבון:* ${companyId} (${acc.accountNumber})`;
-        console.log(`[TELEGRAM] 📤 Sending notification to ${userChatId} for Tx ID: ${txId}`);
+        const messageText = `💳 *תנועה חדשה!*\n====================\n🏪 *עסק:* ${tx.description}\n💰 *סכום:* ₪${effectiveAmount}\n📅 *תאריך:* ${txDate}\n🏦 *חשבון:* ${companyId} (${acc.accountNumber})`;
         bot.sendMessage(userChatId, messageText, { parse_mode: 'Markdown', reply_markup: JSON.stringify(getTxKeyboard('main', txId)) });
       }
     }
@@ -386,8 +405,11 @@ app.delete('/api/credentials/:id', requireAuth, (req, res) => {
 
 app.post('/api/settings', requireAuth, (req, res) => {
   const { key, value } = req.body;
-  console.log(`[API] ⚙️ Updating setting: ${key}`);
-  db.run(`INSERT INTO settings (key, userId, value) VALUES (?, ?, ?) ON CONFLICT(key, userId) DO UPDATE SET value=excluded.value`, [key, req.user.userId, value], (err) => { res.json({ success: !err }); });
+  console.log(`[API] ⚙️ Updating setting: ${key} = ${value}`);
+  if (!key) return res.status(400).json({ success: false, message: 'Missing key' });
+  db.run(`INSERT INTO settings (key, userId, value) VALUES (?, ?, ?) ON CONFLICT(key, userId) DO UPDATE SET value=excluded.value`, [key, req.user.userId, value], (err) => { 
+    res.json({ success: !err }); 
+  });
 });
 
 // ==========================================
@@ -428,32 +450,23 @@ app.get('/api/data', requireAuth, (req, res) => {
           const settings = {};
           if (settingsRows) settingsRows.forEach(r => settings[r.key] = r.value);
           
-          // --- טעינת קטגוריות מקובץ ה-JSON המרכזי ---
           let categoriesList = [];
           let rawCategories = { incomes: [], expenses: [] };
           try {
-            // שימוש ב- fs ו- path שכבר מיובאים בתחילת הקובץ
             const catPath = path.join(__dirname, 'categories.json');
-            
             if (fs.existsSync(catPath)) {
               const catData = JSON.parse(fs.readFileSync(catPath, 'utf8'));
               rawCategories = catData;
-              
-              // שיטוח הקטגוריות למערך אחד פשוט עבור האפליקציה בטלפון
               const allCategories = [...(catData.incomes || []), ...(catData.expenses || [])];
               if (catData.expenses) {
                   catData.expenses.forEach(exp => { if (exp.subs) allCategories.push(...exp.subs); });
               }
               categoriesList = allCategories;
-            } else {
-              console.error(`[API] ⚠️ File not found at path: ${catPath}`);
             }
           } catch(e) { 
-            // עכשיו אם יש שגיאה, השרת יגיד לך בדיוק מה היא (למשל: Unexpected token)
             console.error('[API] ⚠️ Error reading categories.json:', e.message); 
           }
 
-          // השרת שולח את הקטגוריות גם לאתר (raw) וגם לאפליקציה (flat)
           res.json({ 
             transactions: parsedTransactions, 
             accounts: decryptedAccounts, 
@@ -485,10 +498,10 @@ app.delete('/api/account/:id', requireAuth, (req, res) => {
 
 app.post('/api/update-transaction', requireAuth, (req, res) => {
   const { transactionId, description, categoryId, notes, tags } = req.body;
-  console.log(`[API] ✏️ Updating transaction: ${transactionId} to Cat: ${categoryId}`);
+  console.log(`[API] ✏️ Updating transaction: ${transactionId}`);
   const encCategory = encryptData(categoryId, req.user.masterKey);
-  const encNotes = encryptData(notes, req.user.masterKey);
-  const encTags = encryptData(tags, req.user.masterKey);
+  const encNotes = encryptData(notes || '', req.user.masterKey);
+  const encTags = encryptData(tags || '', req.user.masterKey);
 
   db.run(`UPDATE transactions SET category = ?, notes = ?, tags = ? WHERE id = ? AND userId = ?`, [encCategory, encNotes, encTags, transactionId, req.user.userId], (err) => {
     if (err) return res.status(500).json({ success: false, error: err.message });
@@ -614,17 +627,13 @@ if (bot) {
                 return; 
               }
               
-              // משתמשים במספר המקורי במקום Math.abs כדי לשמור על סימן הכסף
               const originalAmt = parseFloat(rawAmt) || 0;
               
               if (rawCat.startsWith('inc_')) {
                 totalIncome += originalAmt;
               } else if (rawCat !== 'misc_uncategorized') {
-                // פחות כפול מינוס = פלוס. לכן מספר שלילי יגדיל את ההוצאות.
-                // אם שמנו 'הוצאה' על מספר חיובי (זיכוי), זה יקטין את ההוצאות.
                 totalExpense -= originalAmt;
               } else {
-                // מצב ברירת מחדל בו לא ניתן סיווג למערכת
                 if (originalAmt > 0) totalIncome += originalAmt;
                 else totalExpense -= originalAmt;
               }
@@ -826,7 +835,6 @@ app.post('/api/sync', requireAuth, async (req, res) => {
 
     if (scrapeResult.success) {
       console.log(`[API-SYNC] ${client} ✅ Scrape success. Saving data...`);
-      // VITAL FIX: Encrypting with Bot Key so both site and telegram can read!
       const userForSync = await new Promise(res => db.get(`SELECT salt FROM users WHERE id = ?`, [req.user.userId], (err, row) => res(row)));
       const syncBotKey = crypto.pbkdf2Sync(process.env.SERVER_SECRET_KEY, userForSync.salt, 100000, 32, 'sha256');
       
@@ -867,7 +875,6 @@ app.post('/api/sync-all', requireAuth, async (req, res) => {
       try {
         const scrapeResult = await scraper.scrape({ id: decUser, username: decUser, password: decPass });
         if (scrapeResult.success) { 
-          // VITAL FIX: Encrypting with Bot Key so both site and telegram can read!
           await saveScrapeResult(scrapeResult, saved.companyId, mappings, durationInt, req.user.userId, botKey); 
           anySuccess = true; 
           console.log(`[API-SYNC-ALL] ${client} ✅ Completed ${saved.companyId}`);

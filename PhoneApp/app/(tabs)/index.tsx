@@ -1,11 +1,12 @@
 // ==========================================
 // PART 1: IMPORTS & CONFIG
 // ==========================================
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, TextInput, ActivityIndicator, Alert, LayoutAnimation, UIManager, Platform, StatusBar, Modal } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { View, Text, ScrollView, FlatList, TouchableOpacity, StyleSheet, TextInput, ActivityIndicator, Alert, LayoutAnimation, UIManager, Platform, StatusBar, Modal, SafeAreaView } from 'react-native';
 import * as Icons from 'lucide-react-native';
 import * as SecureStore from 'expo-secure-store';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-context';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -78,9 +79,7 @@ const fixTimezone = (dateStr) => {
   try {
     let d = new Date(dateStr);
     if (isNaN(d.getTime())) d = new Date(dateStr.replace(' ', 'T') + 'Z');
-    // אם גם עכשיו התאריך לא תקין, נחזיר את המחרוזת המקורית כדי למנוע "Invalid Date"
     if (isNaN(d.getTime())) return String(dateStr);
-    
     d.setHours(d.getHours() + 2);
     return d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) + ' (' + d.toLocaleDateString('he-IL') + ')';
   } catch (e) { return String(dateStr); }
@@ -104,7 +103,6 @@ const MonthDropdown = ({ availableMonths, selectedMonth, setSelectedMonth, isDar
         <Text style={[styles.monthText, isDark && styles.textWhite]}>{selectedMonth}</Text>
         <Icons.ChevronDown color={isDark ? "#94a3b8" : "#64748b"} size={16} />
       </TouchableOpacity>
-
       <Modal visible={open} transparent animationType="fade">
         <TouchableOpacity style={styles.modalOverlay} onPress={() => setOpen(false)}>
           <View style={[styles.monthDropdownMenu, isDark ? styles.bgDark : styles.bgLight]}>
@@ -126,10 +124,21 @@ const MonthDropdown = ({ availableMonths, selectedMonth, setSelectedMonth, isDar
   );
 };
 
-const TransactionRow = ({ tx, isDark, rawCategories, isExpanded, onToggle }) => {
+const TransactionRow = ({ tx, isDark, rawCategories, transactions, isExpanded, onToggle, onEdit, onLinkPress }) => {
   const { main, sub } = getCategoryMeta(tx.categoryId || tx.category, rawCategories, isDark);
   const isIncome = main.type === 'income';
   const iconName = sub?.icon || main.icon;
+
+  let installmentText = null;
+  if (tx.installments && typeof tx.installments === 'object') {
+    installmentText = `תשלום ${tx.installments.number} מתוך ${tx.installments.total}`;
+  } else if (tx.installments) {
+    installmentText = String(tx.installments);
+  } else if (tx.currentInstallment && tx.totalInstallments) {
+    installmentText = `תשלום ${tx.currentInstallment} מתוך ${tx.totalInstallments}`;
+  }
+
+  const linkedTx = tx.linkedTransactionId ? transactions.find(t => t.id === tx.linkedTransactionId) : null;
 
   return (
     <View style={[styles.txRow, isDark ? styles.txRowDark : styles.txRowLight]}>
@@ -145,26 +154,21 @@ const TransactionRow = ({ tx, isDark, rawCategories, isExpanded, onToggle }) => 
               {tx.notes && <Icons.FileText size={10} color={isDark ? '#94a3b8' : '#64748b'} />}
               {tx.tags && <Icons.Tag size={10} color={isDark ? '#94a3b8' : '#64748b'} />}
             </View>
-            <View style={[styles.txMeta, { flexWrap: 'wrap', gap: 4, marginTop: 2 }]}>
+            <View style={styles.txMeta}>
               <Text style={[styles.txDate, isDark && styles.textGrayDark]}>{tx.date}</Text>
               <Text style={[styles.txDot, isDark && styles.textGrayDark]}>•</Text>
-              {/* מציג תת קטגוריה אם ישנה, אחרת מציג ראשית */}
               <View style={[styles.txBadge, isDark && styles.txBadgeDark]}>
                 <Text style={[styles.txBadgeText, isDark && styles.textGrayDark]}>{sub ? sub.name : main.name}</Text>
               </View>
-              
-              {/* הצגת תנועה זמנית אם סגור */}
               {tx.status === 'pending' && (
                 <View style={[styles.txBadge, { backgroundColor: 'rgba(245,158,11,0.15)' }]}>
                   <Text style={[styles.txBadgeText, { color: isDark ? '#fbbf24' : '#d97706' }]}>זמנית</Text>
                 </View>
               )}
-
-              {/* הצגת תשלומים אם קיימים */}
-              {(tx.installments || (tx.currentInstallment && tx.totalInstallments)) && (
+              {installmentText && (
                 <View style={[styles.txBadge, { backgroundColor: 'rgba(59,130,246,0.15)' }]}>
                   <Text style={[styles.txBadgeText, { color: isDark ? '#60a5fa' : '#2563eb' }]}>
-                    {tx.installments ? tx.installments : `תשלום ${tx.currentInstallment} מתוך ${tx.totalInstallments}`}
+                    {installmentText}
                   </Text>
                 </View>
               )}
@@ -180,13 +184,15 @@ const TransactionRow = ({ tx, isDark, rawCategories, isExpanded, onToggle }) => 
       {isExpanded && (
         <View style={[styles.txDetails, isDark ? styles.txDetailsDark : styles.txDetailsLight]}>
           <View style={styles.txDetailsTop}>
-            {/* במידה ויש תנועה מקושרת נציג זאת בתיבה בולטת */}
-            {tx.linkedTransactionId && (
-              <View style={[styles.txDetailBlock, {width: '100%', flexDirection: 'row-reverse', alignItems: 'center', gap: 8, backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff', padding: 8, borderRadius: 8, marginBottom: 12}]}>
+            {linkedTx && (
+              <TouchableOpacity 
+                style={[styles.txDetailBlock, {width: '100%', flexDirection: 'row-reverse', alignItems: 'center', gap: 8, backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff', padding: 8, borderRadius: 8, marginBottom: 12}]}
+                onPress={() => onLinkPress && onLinkPress(linkedTx.id)}
+              >
                 <Icons.Link size={16} color="#3b82f6" />
-                <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark, {marginBottom: 0, fontSize: 12}]}>תנועה קשורה (למשל החזר על הוצאה):</Text>
-                <Text style={[styles.txDetailValue, {color: '#3b82f6', fontWeight: 'bold'}]}>#{tx.linkedTransactionId}</Text>
-              </View>
+                <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark, {marginBottom: 0, fontSize: 12}]}>תנועה קשורה:</Text>
+                <Text style={[styles.txDetailValue, {color: '#3b82f6', fontWeight: 'bold', flexShrink:1}]} numberOfLines={1}>{linkedTx.description} ({linkedTx.date})</Text>
+              </TouchableOpacity>
             )}
             <View style={styles.txDetailBlock}>
               <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark]}>תאריך עסקה</Text>
@@ -205,11 +211,17 @@ const TransactionRow = ({ tx, isDark, rawCategories, isExpanded, onToggle }) => 
             {tx.tags && (
               <View style={[styles.txDetailBlock, {width: '100%'}]}>
                 <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark]}>תגיות</Text>
-                <Text style={[styles.txDetailValue, isDark && styles.textWhite]}>{tx.tags}</Text>
+                <View style={{flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 4, marginTop: 4}}>
+                  {tx.tags.split(',').map((t, i) => t.trim() ? (
+                    <View key={i} style={[styles.txBadge, isDark ? styles.txBadgeDark : {backgroundColor: '#f1f5f9'}]}>
+                       <Text style={[styles.txBadgeText, isDark && styles.textGrayDark]}>#{t.trim()}</Text>
+                    </View>
+                  ) : null)}
+                </View>
               </View>
             )}
           </View>
-          <TouchableOpacity style={[styles.editBtn, isDark ? styles.editBtnDark : styles.editBtnLight, {marginTop: 12}]} onPress={() => Alert.alert("בקרוב", "עריכת תנועה תפתח כאן")}>
+          <TouchableOpacity style={[styles.editBtn, isDark ? styles.editBtnDark : styles.editBtnLight, {marginTop: 12}]} onPress={() => onEdit(tx)}>
              <Icons.Edit2 size={12} color={isDark ? '#fff' : '#3b82f6'} />
              <Text style={[styles.editBtnText, isDark && styles.textWhite, {color: '#3b82f6'}]}>ערוך תנועה</Text>
           </TouchableOpacity>
@@ -222,7 +234,7 @@ const TransactionRow = ({ tx, isDark, rawCategories, isExpanded, onToggle }) => 
 // ==========================================
 // SCREENS
 // ==========================================
-const DashboardScreen = ({ isDark, navigateTo, filteredTxs, totalIncome, totalExpense, balance, availableMonths, selectedMonth, setSelectedMonth, rawCategories }) => {
+const DashboardScreen = ({ isDark, navigateTo, filteredTxs, allTransactions, totalIncome, totalExpense, balance, availableMonths, selectedMonth, setSelectedMonth, rawCategories, onEditTransaction }) => {
   const [expandedTxId, setExpandedTxId] = useState(null);
 
   return (
@@ -256,14 +268,13 @@ const DashboardScreen = ({ isDark, navigateTo, filteredTxs, totalIncome, totalEx
         </View>
         {filteredTxs.length === 0 ? <Text style={styles.emptyText}>אין תנועות</Text> : filteredTxs.slice(0, 4).map(tx => (
           <TransactionRow 
-            key={tx.id} 
-            tx={tx} 
-            isDark={isDark} 
-            rawCategories={rawCategories} 
+            key={tx.id} tx={tx} isDark={isDark} rawCategories={rawCategories} transactions={allTransactions}
             isExpanded={expandedTxId === tx.id}
-            onToggle={() => {
-               LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-               setExpandedTxId(expandedTxId === tx.id ? null : tx.id);
+            onToggle={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setExpandedTxId(expandedTxId === tx.id ? null : tx.id); }}
+            onEdit={onEditTransaction}
+            onLinkPress={(id) => {
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              setExpandedTxId(id);
             }}
           />
         ))}
@@ -272,17 +283,29 @@ const DashboardScreen = ({ isDark, navigateTo, filteredTxs, totalIncome, totalEx
   );
 };
 
-const TransactionsScreen = ({ isDark, filteredTxs, availableMonths, selectedMonth, setSelectedMonth, rawCategories }) => {
+const TransactionsScreen = ({ isDark, filteredTxs, allTransactions, availableMonths, selectedMonth, setSelectedMonth, rawCategories, onEditTransaction }) => {
   const [filter, setFilter] = useState('all');
   const [expandedTxId, setExpandedTxId] = useState(null);
+  const flatListRef = useRef(null);
 
-  const filtered = filteredTxs.filter(tx => {
+  const filtered = useMemo(() => filteredTxs.filter(tx => {
     const { main } = getCategoryMeta(tx.categoryId || tx.category, rawCategories, isDark);
     if (filter === 'all') return true;
     if (filter === 'income') return main.type === 'income';
     if (filter === 'expense') return main.type === 'expense';
     return true;
-  });
+  }), [filteredTxs, filter, isDark, rawCategories]);
+
+  const handleLinkPress = (linkedId) => {
+    const targetIndex = filtered.findIndex(t => t.id === linkedId);
+    if (targetIndex !== -1) {
+      flatListRef.current?.scrollToIndex({ index: targetIndex, animated: true, viewPosition: 0.3 });
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setExpandedTxId(linkedId);
+    } else {
+      Alert.alert('תנועה מסוננת', 'התנועה המקושרת נמצאת בחודש אחר או סוננה על ידי בחירת "הוצאה/הכנסה".');
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -299,22 +322,29 @@ const TransactionsScreen = ({ isDark, filteredTxs, availableMonths, selectedMont
         ))}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenContent}>
-        {filtered.length === 0 && <Text style={styles.emptyText}>לא נמצאו תנועות</Text>}
-        {filtered.map(tx => (
-          <TransactionRow 
-            key={tx.id} 
-            tx={tx} 
-            isDark={isDark} 
-            rawCategories={rawCategories}
-            isExpanded={expandedTxId === tx.id}
-            onToggle={() => {
-               LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-               setExpandedTxId(expandedTxId === tx.id ? null : tx.id);
-            }}
-          />
-        ))}
-      </ScrollView>
+      {filtered.length === 0 ? <Text style={styles.emptyText}>לא נמצאו תנועות</Text> : (
+        <FlatList
+          ref={flatListRef}
+          data={filtered}
+          keyExtractor={item => item.id.toString()}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.screenContent}
+          onScrollToIndexFailed={(info) => {
+            setTimeout(() => {
+              flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
+            }, 500);
+          }}
+          renderItem={({item: tx}) => (
+            <TransactionRow 
+              tx={tx} isDark={isDark} rawCategories={rawCategories} transactions={allTransactions}
+              isExpanded={expandedTxId === tx.id}
+              onToggle={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setExpandedTxId(expandedTxId === tx.id ? null : tx.id); }}
+              onEdit={onEditTransaction}
+              onLinkPress={handleLinkPress}
+            />
+          )}
+        />
+      )}
     </View>
   );
 };
@@ -359,9 +389,6 @@ const ReportsScreen = ({ isDark, filteredTxs, prevMonthTxs, availableMonths, sel
       <View style={styles.dashHeader}>
         <View>
           <Text style={[styles.pageTitle, isDark && styles.textWhite, {marginBottom:0}]}>דוח חודשי מסכם</Text>
-          <TouchableOpacity style={{marginTop: 4, flexDirection: 'row-reverse', alignItems: 'center', gap: 4}}>
-            <Icons.Edit2 size={12} color="#3b82f6" /><Text style={{color: '#3b82f6', fontSize: 12, fontWeight: 'bold'}}>ערוך תקציב מתוכנן</Text>
-          </TouchableOpacity>
         </View>
         <MonthDropdown availableMonths={availableMonths} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} isDark={isDark} />
       </View>
@@ -498,7 +525,6 @@ const SettingsScreen = ({ isDark, setIsDark, settings, updateSetting, onLogout, 
 
       <View style={[styles.accCard, isDark ? styles.accCardDark : styles.accCardLight]}>
         <Text style={[styles.sectionTitle, isDark && styles.textWhite, {marginBottom: 16}]}>הגדרות סנכרון אוטומטי</Text>
-        
         <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark, {marginBottom: 8}]}>תחילת חודש תקציבי</Text>
         <View style={{flexDirection: 'row-reverse', gap: 8, marginBottom: 20}}>
           {['1', '10', '15'].map(d => (
@@ -540,6 +566,7 @@ const SettingsScreen = ({ isDark, setIsDark, settings, updateSetting, onLogout, 
 // MAIN APP WRAPPER
 // ==========================================
 function MainApp({ token, onLogout }) {
+  const insets = useSafeAreaInsets(); // שימוש בטוח עבור כל המכשירים (מצלמה וכפתורי ניווט)
   const [activeTab, setActiveTab] = useState('home');
   const [isDark, setIsDark] = useState(true);
   const [transactions, setTransactions] = useState([]);
@@ -551,6 +578,7 @@ function MainApp({ token, onLogout }) {
   
   const [addAccountModal, setAddAccountModal] = useState(false);
   const [editAccountModal, setEditAccountModal] = useState(null);
+  const [editTxModal, setEditTxModal] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -568,7 +596,17 @@ function MainApp({ token, onLogout }) {
 
   const updateSetting = async (key, val) => {
     setSettings(prev => ({...prev, [key]: val}));
-    try { await fetch(`${API_URL}/api/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'x-app-source': 'mobile' }, body: JSON.stringify({ settings: { [key]: val } }) }); } catch(e){}
+    setLoading(true);
+    try { 
+      // התיקון: שליחת הנתונים במבנה שהשרת מצפה לו
+      await fetch(`${API_URL}/api/settings`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'x-app-source': 'mobile' }, 
+        body: JSON.stringify({ key: key, value: val }) 
+      }); 
+      await fetchData(); // משיכת הנתונים מחדש כדי להציג את החישובים בהתאם להגדרה החדשה
+    } catch(e){}
+    setLoading(false);
   };
 
   const availableMonths = useMemo(() => {
@@ -613,7 +651,6 @@ function MainApp({ token, onLogout }) {
     }, { totalIncome: 0, totalExpense: 0, balance: 0 });
   }, [filteredTxs, rawCategories, isDark]);
 
-  // APIs Functions
   const handleSyncSingle = async (accountId, companyId) => {
     try {
       const res = await fetch(`${API_URL}/api/sync`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'x-app-source': 'mobile' }, body: JSON.stringify({ accountId, savedCompanyId: companyId, companyId }) });
@@ -640,6 +677,49 @@ function MainApp({ token, onLogout }) {
     setEditAccountModal(null);
   };
 
+  const handleEditTransactionSave = async (updatedTx) => {
+    try {
+      // התיקון: פנייה לנתיב הנכון בשרת לעדכון פרטי תנועה
+      const res = await fetch(`${API_URL}/api/update-transaction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'x-app-source': 'mobile' },
+        body: JSON.stringify({
+          transactionId: updatedTx.id,
+          description: updatedTx.description, // נחוץ לשרת כדי ללמוד קטגוריות
+          categoryId: updatedTx.categoryId,
+          notes: updatedTx.notes,
+          tags: updatedTx.tags
+        })
+      });
+
+      if (res.ok) {
+        // התיקון: קריאה נפרדת ונכונה לעדכון הקישור הדו-כיווני בשרת
+        await fetch(`${API_URL}/api/link-transactions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'x-app-source': 'mobile' },
+          body: JSON.stringify({
+            txId1: updatedTx.id,
+            txId2: updatedTx.linkedTransactionId || null
+          })
+        });
+
+        // סנכרון דו כיווני מקומי כדי שהאפליקציה תרגיש מהירה
+        setTransactions(prev => prev.map(t => {
+          if (t.id === updatedTx.id) return updatedTx; 
+          if (updatedTx.linkedTransactionId && t.id === updatedTx.linkedTransactionId) return { ...t, linkedTransactionId: updatedTx.id }; 
+          if (t.linkedTransactionId === updatedTx.id && t.id !== updatedTx.linkedTransactionId) return { ...t, linkedTransactionId: null }; 
+          return t;
+        }));
+        Alert.alert('הצלחה', 'התנועה והקישור נשמרו וסונכרנו בהצלחה');
+        setEditTxModal(null);
+      } else {
+        Alert.alert('שגיאה', 'לא הצלחנו לעדכן את התנועה בשרת');
+      }
+    } catch(e) {
+      Alert.alert('שגיאת רשת', 'אין חיבור לשרת');
+    }
+  };
+
   const handleDeleteAccount = async (id) => {
     Alert.alert('מחיקת חשבון', 'האם אתה בטוח? כל התנועות שלו ימחקו.', [
       { text: 'ביטול', style: 'cancel' },
@@ -660,8 +740,8 @@ function MainApp({ token, onLogout }) {
 
   const renderScreen = () => {
     switch(activeTab) {
-      case 'home': return <DashboardScreen isDark={isDark} navigateTo={setActiveTab} filteredTxs={filteredTxs} totalIncome={totalIncome} totalExpense={totalExpense} balance={balance} availableMonths={availableMonths} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} rawCategories={rawCategories}/>;
-      case 'transactions': return <TransactionsScreen isDark={isDark} filteredTxs={filteredTxs} availableMonths={availableMonths} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} rawCategories={rawCategories}/>;
+      case 'home': return <DashboardScreen isDark={isDark} navigateTo={setActiveTab} filteredTxs={filteredTxs} allTransactions={transactions} totalIncome={totalIncome} totalExpense={totalExpense} balance={balance} availableMonths={availableMonths} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} rawCategories={rawCategories} onEditTransaction={setEditTxModal}/>;
+      case 'transactions': return <TransactionsScreen isDark={isDark} filteredTxs={filteredTxs} allTransactions={transactions} availableMonths={availableMonths} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} rawCategories={rawCategories} onEditTransaction={setEditTxModal}/>;
       case 'reports': return <ReportsScreen isDark={isDark} filteredTxs={filteredTxs} prevMonthTxs={prevMonthTxs} availableMonths={availableMonths} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} rawCategories={rawCategories} />;
       case 'accounts': return <AccountsScreen isDark={isDark} accounts={accounts} transactions={transactions} onSyncSingle={handleSyncSingle} setAddModalVisible={setAddAccountModal} onDeleteAccount={handleDeleteAccount} setEditAccountModal={setEditAccountModal} />;
       case 'settings': return <SettingsScreen isDark={isDark} setIsDark={setIsDark} settings={settings} updateSetting={updateSetting} onLogout={() => {SecureStore.deleteItemAsync('app_token'); onLogout();}} onDeleteUser={handleDeleteUser} />;
@@ -669,8 +749,7 @@ function MainApp({ token, onLogout }) {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, isDark ? styles.bgDark : styles.bgLight]}>
-      {/* Top Bar - Press to refresh */}
+    <View style={[{flex: 1, paddingTop: Math.max(insets.top, 10)}, isDark ? styles.bgDark : styles.bgLight]}>
       <TouchableOpacity onPress={() => {setLoading(true); fetchData();}} style={[styles.topBar, isDark ? styles.bgDark : styles.bgLight]}>
         <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
           <View style={styles.avatar}>{loading ? <ActivityIndicator size="small" color="#fff"/> : <Text style={styles.avatarText}>K</Text>}</View>
@@ -681,7 +760,7 @@ function MainApp({ token, onLogout }) {
       
       <View style={styles.mainContent}>{renderScreen()}</View>
       
-      <View style={[styles.bottomNav, isDark ? styles.bottomNavDark : styles.bottomNavLight]}>
+      <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 16) }, isDark ? styles.bottomNavDark : styles.bottomNavLight]}>
         {[ { id: 'home', label: 'ראשי', icon: Icons.LayoutDashboard }, { id: 'transactions', label: 'תנועות', icon: Icons.List }, { id: 'reports', label: 'דוחות', icon: Icons.PieChart }, { id: 'accounts', label: 'חשבונות', icon: Icons.Wallet }, { id: 'settings', label: 'הגדרות', icon: Icons.Settings } ].map(tab => {
           const isActive = activeTab === tab.id;
           return (
@@ -695,22 +774,18 @@ function MainApp({ token, onLogout }) {
         })}
       </View>
 
-      {/* Add Account Modal */}
       <Modal visible={addAccountModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, isDark ? styles.bgDark : styles.bgLight, {marginTop: 'auto', paddingBottom: 40}]}>
+          <View style={[styles.modalContent, isDark ? styles.bgDark : styles.bgLight, {marginTop: 'auto', paddingBottom: Math.max(insets.bottom, 40)}]}>
              <View style={{flexDirection: 'row-reverse', justifyContent:'space-between', marginBottom: 20}}>
                <Text style={[styles.pageTitle, isDark && styles.textWhite, {marginBottom:0}]}>הוספת מוסד חדש</Text>
                <TouchableOpacity onPress={() => setAddAccountModal(false)}><Icons.X color={isDark ? '#fff' : '#000'} /></TouchableOpacity>
              </View>
-             <ScrollView>
-                <AddAccountForm isDark={isDark} onSave={handleAddAccount} defaultScrape={settings?.scrape_duration || '1'} />
-             </ScrollView>
+             <ScrollView><AddAccountForm isDark={isDark} onSave={handleAddAccount} defaultScrape={settings?.scrape_duration || '1'} /></ScrollView>
           </View>
         </View>
       </Modal>
 
-      {/* Edit Account Modal */}
       <Modal visible={!!editAccountModal} transparent animationType="fade">
         {editAccountModal && (
           <View style={styles.modalOverlay}>
@@ -721,11 +796,210 @@ function MainApp({ token, onLogout }) {
           </View>
         )}
       </Modal>
-    </SafeAreaView>
+
+      <Modal visible={!!editTxModal} transparent animationType="slide">
+        {editTxModal && (
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, isDark ? styles.bgDark : styles.bgLight, {marginTop: 'auto', maxHeight: '90%', padding: 0, paddingBottom: Math.max(insets.bottom, 10), overflow: 'hidden'}]}>
+              <View style={{flexDirection: 'row-reverse', justifyContent:'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: isDark ? '#334155' : '#e2e8f0'}}>
+                <Text style={{fontSize: 18, fontWeight: 'bold', color: isDark ? '#fff' : '#1e293b'}}>עריכת תנועה</Text>
+                <TouchableOpacity onPress={() => setEditTxModal(null)} style={{padding: 6, backgroundColor: isDark ? '#334155' : '#f1f5f9', borderRadius: 20}}><Icons.X size={18} color={isDark ? '#cbd5e1' : '#64748b'} /></TouchableOpacity>
+              </View>
+              <ScrollView style={{padding: 16}} showsVerticalScrollIndicator={false}>
+                <EditTransactionForm 
+                  tx={editTxModal} 
+                  isDark={isDark} 
+                  onSave={handleEditTransactionSave} 
+                  rawCategories={rawCategories} 
+                  transactions={transactions} 
+                />
+              </ScrollView>
+            </View>
+          </View>
+        )}
+      </Modal>
+    </View>
   );
 }
 
-// קומפוננטת עזר לטופס הוספת חשבון בתוך המודאל (ללא תגיות HTML)
+// ==========================================
+// MODAL FORMS
+// ==========================================
+const EditTransactionForm = ({ tx, isDark, onSave, rawCategories, transactions }) => {
+  const initialIsIncome = (rawCategories?.incomes || []).some(c => c.id === tx.category || c.id === tx.categoryId) || tx.amount > 0;
+  
+  const [isIncome, setIsIncome] = useState(initialIsIncome);
+  const [mainCatId, setMainCatId] = useState(null);
+  const [subCatId, setSubCatId] = useState(null);
+  
+  const [notes, setNotes] = useState(tx.notes || '');
+  const [tags, setTags] = useState(tx.tags ? tx.tags.split(',').map(t=>t.trim()).filter(Boolean) : []);
+  const [newTag, setNewTag] = useState('');
+  
+  const [linkedTxId, setLinkedTxId] = useState(tx.linkedTransactionId || '');
+  const [showLinkedPicker, setShowLinkedPicker] = useState(false);
+
+  useEffect(() => {
+    let mId = null, sId = null;
+    const searchId = tx.categoryId || tx.category;
+    if (initialIsIncome) {
+      if ((rawCategories?.incomes || []).find(c => c.id === searchId)) mId = searchId;
+    } else {
+      for (const exp of (rawCategories?.expenses || [])) {
+        if (exp.id === searchId) { mId = exp.id; break; }
+        if (exp.subs) {
+          const s = exp.subs.find(sub => sub.id === searchId);
+          if (s) { mId = exp.id; sId = s.id; break; }
+        }
+      }
+    }
+    setMainCatId(mId);
+    setSubCatId(sId);
+  }, []);
+
+  const handleAddTag = () => {
+    if (newTag.trim() && !tags.includes(newTag.trim())) {
+      setTags([...tags, newTag.trim()]);
+      setNewTag('');
+    }
+  };
+
+  const activeCategories = isIncome ? (rawCategories?.incomes || []) : (rawCategories?.expenses || []);
+  const activeMainCat = activeCategories.find(c => c.id === mainCatId) || activeCategories[0];
+  const availableSubs = activeMainCat?.subs || [];
+
+  const handleSaveClick = () => {
+    const finalCatId = subCatId || mainCatId || activeMainCat?.id;
+    onSave({
+      ...tx,
+      categoryId: finalCatId,
+      category: finalCatId,
+      notes,
+      tags: tags.join(', '),
+      linkedTransactionId: linkedTxId || null
+    });
+  };
+
+  const getLinkedTxName = () => {
+    if (!linkedTxId) return 'בחר תנועה מקושרת...';
+    const ltx = transactions.find(t => t.id === linkedTxId);
+    if (ltx) return `${ltx.description} (${ltx.date})`;
+    return `תנועה מזהה #${linkedTxId}`;
+  };
+
+  return (
+    <View style={{paddingBottom: 40}}>
+      {/* Type Toggle: Income or Expense */}
+      <View style={{flexDirection: 'row-reverse', backgroundColor: isDark ? '#1e293b' : '#f1f5f9', borderRadius: 12, padding: 4, marginBottom: 20}}>
+        <TouchableOpacity style={[{flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8}, !isIncome && {backgroundColor: isDark ? '#334155' : 'white', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 3, elevation: 2}]} onPress={() => {setIsIncome(false); setMainCatId(null); setSubCatId(null);}}>
+          <Text style={{color: !isIncome ? '#ef4444' : (isDark ? '#64748b' : '#94a3b8'), fontWeight: 'bold'}}>הוצאה</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[{flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8}, isIncome && {backgroundColor: isDark ? '#334155' : 'white', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 3, elevation: 2}]} onPress={() => {setIsIncome(true); setMainCatId(null); setSubCatId(null);}}>
+          <Text style={{color: isIncome ? '#10b981' : (isDark ? '#64748b' : '#94a3b8'), fontWeight: 'bold'}}>הכנסה</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Main Categories Wrappable Grid */}
+      <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark, {marginBottom: 8, fontSize: 14, fontWeight: 'bold'}]}>קטגוריה ראשית</Text>
+      <View style={{flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8, marginBottom: 16}}>
+        {activeCategories.map(cat => {
+          const isSel = mainCatId === cat.id;
+          const hex = getHexColor(cat.color, isDark);
+          return (
+            <TouchableOpacity key={cat.id} onPress={() => { setMainCatId(cat.id); setSubCatId(null); }} style={[{width: '23%', aspectRatio: 1, padding: 4, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1}, isSel ? {backgroundColor: hex, borderColor: hex} : {backgroundColor: isDark ? '#1e293b' : 'white', borderColor: isDark ? '#334155' : '#e2e8f0'}]}>
+              <DynamicIcon name={cat.icon || 'HelpCircle'} size={20} color={isSel ? '#fff' : hex} />
+              <Text style={{fontSize: 10, marginTop: 4, color: isSel ? '#fff' : (isDark ? '#cbd5e1' : '#64748b'), fontWeight: isSel ? 'bold' : 'normal', textAlign: 'center'}} numberOfLines={2}>{cat.name}</Text>
+            </TouchableOpacity>
+          )
+        })}
+      </View>
+
+      {/* Sub Categories Wrappable Grid */}
+      {availableSubs.length > 0 && (
+        <>
+          <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark, {marginBottom: 8, fontSize: 14, fontWeight: 'bold'}]}>תת-קטגוריה</Text>
+          <View style={{flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8, marginBottom: 20}}>
+            {availableSubs.map(sub => {
+              const isSel = subCatId === sub.id;
+              const hex = getHexColor(activeMainCat.color, isDark);
+              return (
+                <TouchableOpacity key={sub.id} onPress={() => setSubCatId(sub.id)} style={[{width: '23%', aspectRatio: 1, padding: 4, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1}, isSel ? {backgroundColor: hex, borderColor: hex} : {backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderColor: isDark ? '#334155' : '#e2e8f0'}]}>
+                  <DynamicIcon name={sub.icon || activeMainCat.icon || 'HelpCircle'} size={20} color={isSel ? '#fff' : hex} />
+                  <Text style={{fontSize: 10, marginTop: 4, color: isSel ? '#fff' : (isDark ? '#cbd5e1' : '#64748b'), fontWeight: isSel ? 'bold' : 'normal', textAlign: 'center'}} numberOfLines={2}>{sub.name}</Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+        </>
+      )}
+
+      {/* Tags Input */}
+      <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark, {marginBottom: 8, fontSize: 14, fontWeight: 'bold'}]}>תגיות</Text>
+      <View style={{flexDirection: 'row-reverse', gap: 8, marginBottom: 12}}>
+        <View style={[{flex: 1, flexDirection: 'row-reverse', alignItems: 'center', borderRadius: 12, paddingHorizontal: 12, borderWidth: 1}, isDark ? {backgroundColor: '#1e293b', borderColor: '#334155'} : {backgroundColor: 'white', borderColor: '#e2e8f0'}]}>
+          <Icons.Tag size={16} color={isDark ? '#64748b' : '#94a3b8'} />
+          <TextInput style={{flex: 1, padding: 12, color: isDark ? '#fff' : '#1e293b', textAlign: 'right'}} value={newTag} onChangeText={setNewTag} placeholder="הוסף תגית..." placeholderTextColor={isDark ? '#64748b' : '#94a3b8'} onSubmitEditing={handleAddTag} returnKeyType="done" />
+        </View>
+        <TouchableOpacity onPress={handleAddTag} style={{width: 48, backgroundColor: '#3b82f6', borderRadius: 12, alignItems: 'center', justifyContent: 'center'}}>
+          <Icons.Plus size={20} color="#fff" />
+        </TouchableOpacity>
+      </View>
+      
+      {/* Tags List */}
+      {tags.length > 0 && (
+        <View style={{flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8, marginBottom: 20}}>
+          {tags.map((tag, idx) => (
+            <View key={idx} style={[{flexDirection: 'row-reverse', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1}, isDark ? {backgroundColor: '#1e293b', borderColor: '#334155'} : {backgroundColor: '#f1f5f9', borderColor: '#e2e8f0'}]}>
+              <Text style={{fontSize: 12, color: isDark ? '#cbd5e1' : '#475569'}}>#{tag}</Text>
+              <TouchableOpacity onPress={() => setTags(tags.filter(t => t !== tag))}><Icons.X size={12} color="#ef4444" /></TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Notes Textarea */}
+      <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark, {marginBottom: 8, fontSize: 14, fontWeight: 'bold'}]}>הערות</Text>
+      <TextInput style={[{borderRadius: 12, padding: 16, minHeight: 80, textAlignVertical: 'top', textAlign: 'right', borderWidth: 1, marginBottom: 20}, isDark ? {backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff'} : {backgroundColor: 'white', borderColor: '#e2e8f0', color: '#1e293b'}]} value={notes} onChangeText={setNotes} multiline placeholder="כתוב הערה לתנועה..." placeholderTextColor={isDark ? '#64748b' : '#94a3b8'} />
+
+      {/* Linked Transaction Selector */}
+      <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark, {marginBottom: 8, fontSize: 14, fontWeight: 'bold'}]}>תנועה מקושרת</Text>
+      <TouchableOpacity style={[{flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderRadius: 12, borderWidth: 1, marginBottom: 4}, isDark ? {backgroundColor: '#1e293b', borderColor: '#334155'} : {backgroundColor: 'white', borderColor: '#e2e8f0'}]} onPress={() => setShowLinkedPicker(!showLinkedPicker)}>
+        <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 8, flex: 1}}>
+          <Icons.LinkIcon size={16} color={linkedTxId ? '#3b82f6' : (isDark ? '#64748b' : '#94a3b8')} />
+          <Text style={{color: linkedTxId ? '#3b82f6' : (isDark ? '#cbd5e1' : '#475569'), fontWeight: linkedTxId ? 'bold' : 'normal', flexShrink: 1}} numberOfLines={1}>{getLinkedTxName()}</Text>
+        </View>
+        {linkedTxId ? 
+          <TouchableOpacity onPress={() => setLinkedTxId('')} style={{paddingHorizontal: 8}}><Icons.X size={16} color="#ef4444" /></TouchableOpacity> 
+          : <Icons.ChevronDown size={16} color={isDark ? '#64748b' : '#94a3b8'} />
+        }
+      </TouchableOpacity>
+      <Text style={{fontSize: 10, color: isDark ? '#64748b' : '#94a3b8', textAlign: 'right', marginBottom: 20}}>* מאפשר לחבר חיובים קשורים (למשל הוצאה והחזר כספי).</Text>
+
+      {/* Linked Picker Dropdown (Inline) */}
+      {showLinkedPicker && (
+        <View style={[{maxHeight: 200, borderWidth: 1, borderRadius: 12, marginBottom: 20, overflow: 'hidden'}, isDark ? {backgroundColor: '#1e293b', borderColor: '#334155'} : {backgroundColor: 'white', borderColor: '#e2e8f0'}]}>
+          <ScrollView nestedScrollEnabled>
+            {transactions.filter(t => t.id !== tx.id).slice(0, 30).map(t => (
+              <TouchableOpacity key={t.id} style={{padding: 12, borderBottomWidth: 1, borderBottomColor: isDark ? '#334155' : '#f1f5f9', flexDirection: 'row-reverse', justifyContent: 'space-between'}} onPress={() => {setLinkedTxId(t.id); setShowLinkedPicker(false);}}>
+                 <View style={{flexShrink: 1}}>
+                   <Text style={{color: isDark ? '#fff' : '#1e293b', fontWeight: 'bold', textAlign: 'right'}} numberOfLines={1}>{t.description}</Text>
+                   <Text style={{color: isDark ? '#64748b' : '#94a3b8', fontSize: 10, textAlign: 'right'}}>{t.date}</Text>
+                 </View>
+                 <Text style={{color: t.amount > 0 ? '#10b981' : (isDark ? '#fff' : '#1e293b')}} dir="ltr">{t.amount} ₪</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Save Button */}
+      <TouchableOpacity style={{backgroundColor: '#3b82f6', paddingVertical: 16, borderRadius: 12, alignItems: 'center', shadowColor: '#3b82f6', shadowOpacity: 0.3, shadowRadius: 8, elevation: 5}} onPress={handleSaveClick}>
+        <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>שמור שינויים</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 const AddAccountForm = ({ isDark, onSave, defaultScrape }) => {
   const [companyId, setCompanyId] = useState('leumi');
   const [username, setUsername] = useState('');
@@ -748,13 +1022,10 @@ const AddAccountForm = ({ isDark, onSave, defaultScrape }) => {
             </TouchableOpacity>
           ))}
        </View>
-       
        <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark]}>שם משתמש / ת.ז</Text>
        <TextInput style={[styles.input, isDark ? styles.inputDark : styles.inputLight]} value={username} onChangeText={setUsername} placeholderTextColor={isDark ? '#64748b' : '#94a3b8'} />
-       
        <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark]}>סיסמה</Text>
        <TextInput style={[styles.input, isDark ? styles.inputDark : styles.inputLight, {textAlign: 'left'}]} value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor={isDark ? '#64748b' : '#94a3b8'} dir="ltr" />
-       
        <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark, {marginBottom: 8}]}>זמן סריקה (ברירת מחדל: {defaultScrape} חודשים)</Text>
        <View style={{flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8, marginBottom: 20}}>
           {[{v:'', l:'ברירת מחדל'}, {v:'1', l:'חודש'}, {v:'6', l:'חצי שנה'}, {v:'12', l:'שנה'}, {v:'24', l:'שנתיים'}].map(item => (
@@ -763,7 +1034,6 @@ const AddAccountForm = ({ isDark, onSave, defaultScrape }) => {
             </TouchableOpacity>
           ))}
        </View>
-
        <TouchableOpacity style={styles.loginBtn} onPress={() => {setLoading(true); onSave(companyId, username, password, customDuration);}} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>התחבר וסנכרן נתונים</Text>}
        </TouchableOpacity>
@@ -800,7 +1070,9 @@ const EditAccountForm = ({ account, isDark, onSave, onCancel }) => {
 export default function App() {
   const [token, setToken] = useState(null);
   const [isReady, setIsReady] = useState(false);
-  useEffect(() => { SecureStore.getItemAsync('app_token').then(t => { if(t) setToken(t); setIsReady(true); }); }, []);
+  
+  useEffect(() => { setIsReady(true); }, []);
+  
   if (!isReady) return <View style={{flex:1, justifyContent:'center'}}><ActivityIndicator size="large" color="#2563eb" /></View>;
   
   const handleAuth = async (username, password, setLoading) => {
@@ -827,9 +1099,9 @@ export default function App() {
         </SafeAreaView>
       )
     };
-    return <AuthScreen />;
+    return <SafeAreaProvider><AuthScreen /></SafeAreaProvider>;
   }
-  return <MainApp token={token} onLogout={() => setToken(null)} />;
+  return <SafeAreaProvider><MainApp token={token} onLogout={() => setToken(null)} /></SafeAreaProvider>;
 }
 
 // ==========================================
@@ -846,7 +1118,6 @@ const styles = StyleSheet.create({
   avatarText: { color: 'white', fontWeight: 'bold' },
   appTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b' },
   
-  // הוספת מרווח תחתון מכובד שמונע הסתרה על ידי שורת הניווט (Bottom Nav)
   mainContent: { flex: 1 }, screen: { flex: 1, paddingHorizontal: 20 }, screenContent: { paddingBottom: 140, paddingTop: 10 },
   dashHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   dashTitle: { fontSize: 24, fontWeight: 'bold', color: '#1e293b', textAlign: 'right' }, dashSubtitle: { fontSize: 12, color: '#64748b', textAlign: 'right', marginTop: 4 },
@@ -873,8 +1144,8 @@ const styles = StyleSheet.create({
   txRow: { borderRadius: 16, borderWidth: 1, marginBottom: 8, overflow: 'hidden' }, txRowLight: { backgroundColor: 'white', borderColor: '#f1f5f9' }, txRowDark: { backgroundColor: '#1e293b', borderColor: '#334155' },
   txRowHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', padding: 12 }, txRowLeft: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12, flex: 1 },
   txIconBox: { padding: 8, borderRadius: 10 }, txName: { fontSize: 14, fontWeight: '600', color: '#1e293b', textAlign: 'right', marginBottom: 2 },
-  txMeta: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }, txDate: { fontSize: 10, color: '#64748b' }, txDot: { fontSize: 10, color: '#cbd5e1' },
-  txBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: '#f1f5f9' }, txBadgeDark: { backgroundColor: '#334155' }, txBadgeText: { fontSize: 10, color: '#475569' },
+  txMeta: { flexDirection: 'row-reverse', flexWrap: 'wrap', alignItems: 'center', gap: 4, marginTop: 2 }, txDate: { fontSize: 10, color: '#64748b' }, txDot: { fontSize: 10, color: '#cbd5e1' },
+  txBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: '#f1f5f9', flexShrink: 0 }, txBadgeDark: { backgroundColor: '#334155' }, txBadgeText: { fontSize: 10, color: '#475569' },
   txRowRight: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }, txAmount: { fontSize: 14, fontWeight: 'bold' },
   txDetails: { borderTopWidth: 1, padding: 12 }, txDetailsLight: { backgroundColor: '#f8fafc', borderColor: '#f1f5f9' }, txDetailsDark: { backgroundColor: 'rgba(0,0,0,0.2)', borderColor: '#334155' },
   txDetailsTop: { flexDirection: 'row-reverse', justifyContent: 'space-between', flexWrap:'wrap', gap: 10 }, txDetailBlock: { width: '48%', alignItems: 'flex-end', marginBottom: 8 },
@@ -904,8 +1175,7 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { width: '100%', padding: 24, borderRadius: 24 },
 
-  // הוספת ריווח תחתון מותאם כדי ליצור הפרדה מכפתורי הניווט של הטלפון
-  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row-reverse', justifyContent: 'space-around', alignItems: 'center', paddingTop: 12, paddingBottom: Platform.OS === 'ios' ? 34 : 28, borderTopWidth: 1 },
+  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row-reverse', justifyContent: 'space-around', alignItems: 'center', paddingTop: 12, borderTopWidth: 1 },
   bottomNavLight: { backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e2e8f0' }, bottomNavDark: { backgroundColor: 'rgba(2,6,23,0.95)', borderColor: '#1e293b' },
   navItem: { alignItems: 'center', gap: 4, width: 60 }, navIconBox: { padding: 6, borderRadius: 12 },
   navIconActiveLight: { backgroundColor: '#dbeafe' }, navIconActiveDark: { backgroundColor: 'rgba(37,99,235,0.2)' }, navLabel: { fontSize: 10, fontWeight: '600' }
