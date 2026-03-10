@@ -35,29 +35,34 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
   console.log(`[TELEGRAM] ⚠️ No Bot Token found. Telegram features are disabled.`);
 }
 
-const BOT_CATEGORIES = {
-  incomes: [
-    { id: 'inc_salary', name: 'משכורת', emoji: '💼' },
-    { id: 'inc_allowance', name: 'קצבה או מלגה', emoji: '🏛️' },
-    { id: 'inc_property', name: 'הכנסה מנכס', emoji: '🏠' },
-    { id: 'inc_business', name: 'הכנסה מעסק', emoji: '👔' },
-    { id: 'inc_dividends', name: 'דיווידנדים ורווחים', emoji: '📈' },
-    { id: 'inc_misc', name: 'הכנסות שונות', emoji: '➕' }
-  ],
-  expenses: [
-    { id: 'exp_household', name: 'משק בית', emoji: '🏠', subs: [{ id: 'hh_telecom', name: 'טלפון ואינטרנט', emoji: '📺' }, { id: 'hh_mortgage', name: 'משכנתא', emoji: '🔑' }, { id: 'hh_rent', name: 'דמי שכירות', emoji: '🏡' }, { id: 'hh_taxes', name: 'ארנונה', emoji: '🏛️' }, { id: 'hh_committee', name: 'ועד בית', emoji: '👥' }, { id: 'hh_water', name: 'מים', emoji: '💧' }, { id: 'hh_gas', name: 'גז והסקה', emoji: '🔥' }, { id: 'hh_electricity', name: 'חשמל', emoji: '⚡' }, { id: 'hh_insurance', name: 'ביטוח דירה', emoji: '🛡️' }, { id: 'hh_maintenance', name: 'אחזקת בית', emoji: '🔨' }, { id: 'hh_cleaning', name: 'ניקיון', emoji: '✨' }, { id: 'hh_gardening', name: 'גינון', emoji: '🌿' }, { id: 'hh_misc', name: 'שונות', emoji: '➕' }] },
-    { id: 'exp_shopping', name: 'עושים קניות', emoji: '🛍️', subs: [{ id: 'shop_supermarket', name: 'סופר ומכולת', emoji: '🛒' }, { id: 'shop_furniture', name: 'ריהוט לבית', emoji: '🛋️' }, { id: 'shop_electronics', name: 'אלקטרוניקה', emoji: '💻' }, { id: 'shop_clothing', name: 'בגדים והנעלה', emoji: '👕' }, { id: 'shop_jewelry', name: 'תכשיטים', emoji: '⌚' }, { id: 'shop_tobacco', name: 'טבק ועישון', emoji: '🚬' }, { id: 'shop_misc', name: 'שונות', emoji: '➕' }] },
-    { id: 'exp_transport', name: 'רכב ותחבורה', emoji: '🚗', subs: [{ id: 'trans_fuel', name: 'דלק וטעינה', emoji: '⛽' }, { id: 'trans_rental', name: 'השכרת רכב', emoji: '🚙' }, { id: 'trans_public', name: 'תחבורה ציבורית', emoji: '🚌' }, { id: 'trans_parking', name: 'חנייה', emoji: '🅿️' }, { id: 'trans_fines', name: 'קנסות', emoji: '📜' }, { id: 'trans_garage', name: 'מוסך ואחזקה', emoji: '🔧' }, { id: 'trans_tolls', name: 'כבישי אגרה', emoji: '🛣️' }, { id: 'trans_insurance', name: 'ביטוח רכב', emoji: '🛡️' }, { id: 'trans_misc', name: 'שונות', emoji: '➕' }] },
-    { id: 'exp_health', name: 'בריאות וטיפוח', emoji: '❤️', subs: [{ id: 'hlth_alternative', name: 'רפואה משלימה', emoji: '🌿' }, { id: 'hlth_services', name: 'ייעוץ וטיפול', emoji: '🩺' }, { id: 'hlth_insurance', name: 'ביטוחי בריאות', emoji: '💓' }, { id: 'hlth_dental', name: 'רפואת שיניים', emoji: '🦷' }, { id: 'hlth_optical', name: 'אופטיקה', emoji: '👓' }, { id: 'hlth_pharmacy', name: 'בתי מרקחת', emoji: '💊' }, { id: 'hlth_beauty', name: 'טיפולי יופי', emoji: '✂️' }, { id: 'hlth_fitness', name: 'כושר', emoji: '🏋️' }, { id: 'hlth_misc', name: 'שונות', emoji: '➕' }] },
-    { id: 'exp_family', name: 'משפחה והשכלה', emoji: '👨‍👩‍👧‍👦', subs: [{ id: 'fam_school', name: 'גן ובית ספר', emoji: '🎒' }, { id: 'fam_higher_ed', name: 'השכלה גבוהה', emoji: '🎓' }, { id: 'fam_activities', name: 'חוגים', emoji: '⛺' }, { id: 'fam_babysitter', name: 'בייביסיטר', emoji: '👶' }, { id: 'fam_toys', name: 'משחקים', emoji: '🎮' }, { id: 'fam_baby', name: 'גיל הרך', emoji: '🍼' }, { id: 'fam_support', name: 'תמיכה', emoji: '🤝' }, { id: 'fam_pets', name: 'חיות מחמד', emoji: '🐕' }, { id: 'fam_misc', name: 'שונות', emoji: '➕' }] },
-    { id: 'exp_leisure', name: 'פנאי ותרבות', emoji: '🎟️', subs: [{ id: 'leis_shows', name: 'הופעות וקולנוע', emoji: '🍿' }, { id: 'leis_gifts', name: 'מתנות ואירועים', emoji: '🎁' }, { id: 'leis_music', name: 'מוזיקה וקריאה', emoji: '🎵' }, { id: 'leis_workshops', name: 'סדנאות', emoji: '🎨' }, { id: 'leis_hobbies', name: 'תחביבים', emoji: '🚴' }, { id: 'leis_sports', name: 'ספורט', emoji: '🏆' }, { id: 'leis_misc', name: 'שונות', emoji: '➕' }] },
-    { id: 'exp_dining', name: 'אוכלים בחוץ', emoji: '🍽️', subs: [{ id: 'dine_fastfood', name: 'מזון מהיר', emoji: '🍔' }, { id: 'dine_restaurants', name: 'מסעדות ופאבים', emoji: '🍻' }, { id: 'dine_misc', name: 'שונות', emoji: '🍽️' }] },
-    { id: 'exp_travel', name: 'חופשות וטיולים', emoji: '✈️', subs: [{ id: 'trvl_flights', name: 'טיסות', emoji: '🛫' }, { id: 'trvl_attractions', name: 'אטרקציות', emoji: '🗺️' }, { id: 'trvl_accommodation', name: 'לינה', emoji: '🏨' }, { id: 'trvl_misc', name: 'שונות', emoji: '➕' }] },
-    { id: 'exp_business', name: 'שירותים עיסקיים', emoji: '💼', subs: [{ id: 'biz_delivery', name: 'דואר ומשלוחים', emoji: '📦' }, { id: 'biz_legal', name: 'הנה"ח ומשפטי', emoji: '📄' }, { id: 'biz_marketing', name: 'שיווק', emoji: '🖨️' }, { id: 'biz_consulting', name: 'ייעוץ', emoji: '💡' }, { id: 'biz_misc', name: 'שונות', emoji: '➕' }] },
-    { id: 'exp_financial', name: 'פיננסים', emoji: '🏦', subs: [{ id: 'fin_loans', name: 'פירעון הלוואה', emoji: '📉' }, { id: 'fin_fees', name: 'עמלות', emoji: '💸' }, { id: 'fin_interest', name: 'ריביות', emoji: '📊' }, { id: 'fin_misc', name: 'שונות', emoji: '➕' }] },
-    { id: 'exp_misc', name: 'שונות', emoji: '❓', subs: [{ id: 'misc_taxes', name: 'מיסים', emoji: '🏛️' }, { id: 'misc_religion', name: 'דת ותרומות', emoji: '🤝' }, { id: 'misc_gambling', name: 'הימורים', emoji: '🎲' }, { id: 'misc_uncategorized', name: 'ללא סיווג', emoji: '❓' }, { id: 'misc_other', name: 'שונות', emoji: '➕' }] }
-  ]
+// מיפוי אייקונים (Lucide) לאימוג'ים כדי שהתפריט בטלגרם יישאר צבעוני
+const ICON_TO_EMOJI = {
+  "Wallet": "💼", "Landmark": "🏛️", "Home": "🏠", "Briefcase": "👔", "TrendingUp": "📈", 
+  "MoreHorizontal": "➕", "Tv": "📺", "Key": "🔑", "Users": "👥", "Droplet": "💧", 
+  "Flame": "🔥", "Zap": "⚡", "Shield": "🛡️", "Hammer": "🔨", "Sparkles": "✨", 
+  "Flower": "🌿", "ShoppingBag": "🛍️", "Sofa": "🛋️", "Monitor": "💻", "Shirt": "👕", 
+  "Watch": "⌚", "Wind": "🚬", "Car": "🚗", "Fuel": "⛽", "Bus": "🚌", "Map": "🗺️", 
+  "ScrollText": "📜", "Wrench": "🔧", "Route": "🛣️", "Heart": "❤️", "Activity": "🌿", 
+  "Stethoscope": "🩺", "HeartPulse": "💓", "Eye": "👓", "Pill": "💊", "Scissors": "✂️", 
+  "Dumbbell": "🏋️", "Baby": "👶", "GraduationCap": "🎓", "Tent": "⛺", "User": "👤", 
+  "Gamepad2": "🎮", "Package": "📦", "HandHeart": "🤝", "Dog": "🐕", "Ticket": "🎟️", 
+  "Gift": "🎁", "Music": "🎵", "BookOpen": "📚", "Bike": "🚴", "Trophy": "🏆", 
+  "Utensils": "🍽️", "Pizza": "🍕", "Coffee": "☕", "Plane": "✈️", "Bed": "🏨", 
+  "Mail": "✉️", "FileText": "📄", "Printer": "🖨️", "Lightbulb": "💡", "Percent": "📉", 
+  "TrendingDown": "💸"
 };
+const getEmoji = (icon) => ICON_TO_EMOJI[icon] || '🔹';
+
+// פונקציה שקוראת את הקטגוריות ישירות מקובץ ה-JSON (כך שלא צריך להפעיל מחדש את השרת כשמוסיפים קטגוריה!)
+function getBotCategories() {
+  try {
+    const catData = JSON.parse(fs.readFileSync(path.join(__dirname, 'categories.json'), 'utf8'));
+    return { incomes: catData.incomes || [], expenses: catData.expenses || [] };
+  } catch(e) {
+    console.error('[TELEGRAM] ⚠️ Failed to load categories.json');
+    return { incomes: [], expenses: [] };
+  }
+}
 
 const MAIN_KEYBOARD = {
   reply_markup: {
@@ -74,6 +79,8 @@ const pendingStates = new Map();
 
 const getTxKeyboard = (step, txId, extraData = null) => {
   let keyboard = [];
+  const cats = getBotCategories(); // קריאת הקטגוריות המעודכנות ביותר
+
   if (step === 'main') {
     keyboard = [
       [{ text: '🏷️ שינוי קטגוריה', callback_data: `menu_${txId}_type` }],
@@ -88,26 +95,27 @@ const getTxKeyboard = (step, txId, extraData = null) => {
   }
   else if (step === 'inc') {
     let row = [];
-    BOT_CATEGORIES.incomes.forEach((cat, i) => {
-      row.push({ text: `${cat.emoji} ${cat.name}`, callback_data: `set_${txId}_${cat.id}` });
-      if (row.length === 2 || i === BOT_CATEGORIES.incomes.length - 1) { keyboard.push(row); row = []; }
+    cats.incomes.forEach((cat, i) => {
+      row.push({ text: `${getEmoji(cat.icon)} ${cat.name}`, callback_data: `set_${txId}_${cat.id}` });
+      if (row.length === 2 || i === cats.incomes.length - 1) { keyboard.push(row); row = []; }
     });
     keyboard.push([{ text: '🔙 חזור', callback_data: `menu_${txId}_type` }]);
   }
   else if (step === 'exp') {
     let row = [];
-    BOT_CATEGORIES.expenses.forEach((cat, i) => {
-      row.push({ text: `${cat.emoji} ${cat.name}`, callback_data: `subs_${txId}_${cat.id}` });
-      if (row.length === 2 || i === BOT_CATEGORIES.expenses.length - 1) { keyboard.push(row); row = []; }
+    cats.expenses.forEach((cat, i) => {
+      // כפתור לקטגוריית אב שמוביל לתתי-קטגוריות (subs)
+      row.push({ text: `${getEmoji(cat.icon)} ${cat.name}`, callback_data: `subs_${txId}_${cat.id}` });
+      if (row.length === 2 || i === cats.expenses.length - 1) { keyboard.push(row); row = []; }
     });
     keyboard.push([{ text: '🔙 חזור', callback_data: `menu_${txId}_type` }]);
   }
   else if (step === 'subs' && extraData) {
-    const parentCat = BOT_CATEGORIES.expenses.find(c => c.id === extraData);
+    const parentCat = cats.expenses.find(c => c.id === extraData);
     if (parentCat && parentCat.subs) {
       let row = [];
       parentCat.subs.forEach((sub, i) => {
-        row.push({ text: `${sub.emoji} ${sub.name}`, callback_data: `set_${txId}_${sub.id}` });
+        row.push({ text: `${getEmoji(sub.icon)} ${sub.name}`, callback_data: `set_${txId}_${sub.id}` });
         if (row.length === 2 || i === parentCat.subs.length - 1) { keyboard.push(row); row = []; }
       });
     }
@@ -189,41 +197,43 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, message: { su
 
 app.post('/api/auth/register', (req, res) => {
   const { username, password } = req.body;
-  console.log(`[AUTH] 👤 Registration attempt: ${username}`);
+  const client = req.headers['x-app-source'] === 'mobile' ? '📱 [APP]' : '💻 [WEB]';
+  console.log(`[AUTH] ${client} 👤 Registration attempt: ${username}`);
   const userId = crypto.randomUUID();
   const salt = crypto.randomBytes(16).toString('hex');
   const passwordHash = crypto.scryptSync(password, salt, 64).toString('hex');
 
   db.run(`INSERT INTO users (id, username, passwordHash, salt) VALUES (?, ?, ?, ?)`, [userId, username, passwordHash, salt], function(err) {
     if (err) {
-      console.error(`[AUTH] ❌ Registration failed for ${username}: Name already exists`);
+      console.error(`[AUTH] ${client} ❌ Registration failed for ${username}: Name already exists`);
       return res.status(400).json({ success: false, message: 'שם המשתמש כבר קיים' });
     }
     db.run(`UPDATE transactions SET userId = ? WHERE userId IS NULL`, [userId]);
     db.run(`UPDATE accounts SET userId = ? WHERE userId IS NULL`, [userId]);
     credsDb.run(`UPDATE saved_credentials SET userId = ? WHERE userId IS NULL`, [userId]);
-    console.log(`[AUTH] ✅ Registration successful for ${username} (ID: ${userId})`);
+    console.log(`[AUTH] ${client} ✅ Registration successful for ${username} (ID: ${userId})`);
     res.json({ success: true });
   });
 });
 
 app.post('/api/auth/login', loginLimiter, (req, res) => {
   const { username, password } = req.body;
-  console.log(`[AUTH] 🔐 Login attempt: ${username}`);
+  const client = req.headers['x-app-source'] === 'mobile' ? '📱 [APP]' : '💻 [WEB]';
+  console.log(`[AUTH] ${client} 🔐 Login attempt: ${username}`);
   db.get(`SELECT * FROM users WHERE username = ?`, [username], (err, user) => {
     if (!user) {
-      console.error(`[AUTH] ❌ Login failed: User ${username} not found`);
+      console.error(`[AUTH] ${client} ❌ Login failed: User ${username} not found`);
       return res.status(401).json({ success: false, message: 'פרטים שגויים' });
     }
     const hashVerify = crypto.scryptSync(password, user.salt, 64).toString('hex');
     if (hashVerify !== user.passwordHash) {
-      console.error(`[AUTH] ❌ Login failed: Incorrect password for ${username}`);
+      console.error(`[AUTH] ${client} ❌ Login failed: Incorrect password for ${username}`);
       return res.status(401).json({ success: false, message: 'פרטים שגויים' });
     }
     const masterKey = crypto.pbkdf2Sync(password, user.salt, 100000, 32, 'sha256');
     const token = crypto.randomUUID();
     activeSessions.set(token, { userId: user.id, masterKey, expiresAt: Date.now() + SESSION_TIMEOUT_MS });
-    console.log(`[AUTH] ✅ Login success: ${username}. Session created.`);
+    console.log(`[AUTH] ${client} ✅ Login success: ${username}. Session created.`);
     res.json({ success: true, token });
   });
 });
@@ -417,7 +427,40 @@ app.get('/api/data', requireAuth, (req, res) => {
           });
           const settings = {};
           if (settingsRows) settingsRows.forEach(r => settings[r.key] = r.value);
-          res.json({ transactions: parsedTransactions, accounts: decryptedAccounts, settings });
+          
+          // --- טעינת קטגוריות מקובץ ה-JSON המרכזי ---
+          let categoriesList = [];
+          let rawCategories = { incomes: [], expenses: [] };
+          try {
+            // שימוש ב- fs ו- path שכבר מיובאים בתחילת הקובץ
+            const catPath = path.join(__dirname, 'categories.json');
+            
+            if (fs.existsSync(catPath)) {
+              const catData = JSON.parse(fs.readFileSync(catPath, 'utf8'));
+              rawCategories = catData;
+              
+              // שיטוח הקטגוריות למערך אחד פשוט עבור האפליקציה בטלפון
+              const allCategories = [...(catData.incomes || []), ...(catData.expenses || [])];
+              if (catData.expenses) {
+                  catData.expenses.forEach(exp => { if (exp.subs) allCategories.push(...exp.subs); });
+              }
+              categoriesList = allCategories;
+            } else {
+              console.error(`[API] ⚠️ File not found at path: ${catPath}`);
+            }
+          } catch(e) { 
+            // עכשיו אם יש שגיאה, השרת יגיד לך בדיוק מה היא (למשל: Unexpected token)
+            console.error('[API] ⚠️ Error reading categories.json:', e.message); 
+          }
+
+          // השרת שולח את הקטגוריות גם לאתר (raw) וגם לאפליקציה (flat)
+          res.json({ 
+            transactions: parsedTransactions, 
+            accounts: decryptedAccounts, 
+            settings, 
+            categories: categoriesList, 
+            rawCategories: rawCategories 
+          });
         });
       });
     });
@@ -485,6 +528,7 @@ app.post('/api/add-transaction', requireAuth, (req, res) => {
       res.json({ success: true, transactionId: this.lastID });
   });
 });
+
 
 // ==========================================
 // PART 10: TELEGRAM CALLBACKS & LISTENER
@@ -743,6 +787,7 @@ cron.schedule('* * * * *', () => {
 // PART 12: MANUAL SYNC ROUTES & SERVER START
 // ==========================================
 app.post('/api/sync', requireAuth, async (req, res) => {
+  const client = req.headers['x-app-source'] === 'mobile' ? '📱 [APP]' : '💻 [WEB]';
   let { companyId, credentials, savedCompanyId, accountId, customScrapeDuration } = req.body;
   let finalScrapeDuration = customScrapeDuration;
 
@@ -753,7 +798,7 @@ app.post('/api/sync', requireAuth, async (req, res) => {
 
   try {
     if (savedCompanyId) {
-      console.log(`[API-SYNC] 🔍 Loading vault data for ${savedCompanyId}`);
+      console.log(`[API-SYNC] ${client} 🔍 Loading vault data for ${savedCompanyId}`);
       const saved = await new Promise((resolve) => { credsDb.get('SELECT * FROM saved_credentials WHERE companyId = ? AND userId = ?', [savedCompanyId, req.user.userId], (err, row) => resolve(row)); });
       if (!saved) return res.status(400).json({ success: false, errorMessage: 'פרטי ההתחברות לא נמצאו בכספת' });
       
@@ -772,7 +817,7 @@ app.post('/api/sync', requireAuth, async (req, res) => {
     const mappings = await new Promise((resolve) => { db.all('SELECT * FROM merchant_categories', [], (err, rows) => { const map = {}; (rows||[]).forEach(r => map[r.merchant] = r.categoryId); resolve(map); }); });
     const startDate = new Date(); startDate.setMonth(startDate.getMonth() - durationInt);
 
-    console.log(`[API-SYNC] 🚀 Starting manual sync for ${companyId}`);
+    console.log(`[API-SYNC] ${client} 🚀 Starting manual sync for ${companyId}`);
     const options = { companyId, startDate, combineInstallments: false, showBrowser: false, executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] };
     const scraper = createScraper(options);
     
@@ -780,7 +825,7 @@ app.post('/api/sync', requireAuth, async (req, res) => {
     const scrapeResult = await scraper.scrape(credentials);
 
     if (scrapeResult.success) {
-      console.log(`[API-SYNC] ✅ Scrape success. Saving data...`);
+      console.log(`[API-SYNC] ${client} ✅ Scrape success. Saving data...`);
       // VITAL FIX: Encrypting with Bot Key so both site and telegram can read!
       const userForSync = await new Promise(res => db.get(`SELECT salt FROM users WHERE id = ?`, [req.user.userId], (err, row) => res(row)));
       const syncBotKey = crypto.pbkdf2Sync(process.env.SERVER_SECRET_KEY, userForSync.salt, 100000, 32, 'sha256');
@@ -788,17 +833,18 @@ app.post('/api/sync', requireAuth, async (req, res) => {
       await saveScrapeResult(scrapeResult, companyId, mappings, durationInt, req.user.userId, syncBotKey);
       res.json({ success: true });
     } else {
-      console.error(`[API-SYNC] ❌ Scrape Failed: ${scrapeResult.errorType}`);
+      console.error(`[API-SYNC] ${client} ❌ Scrape Failed: ${scrapeResult.errorType}`);
       res.status(400).json({ success: false, errorType: scrapeResult.errorType, errorMessage: scrapeResult.errorMessage });
     }
   } catch (error) { 
-    console.error(`[API-SYNC] ❌ Error:`, error);
+    console.error(`[API-SYNC] ${client} ❌ Error:`, error);
     res.status(500).json({ success: false, message: error.message }); 
   }
 });
 
 app.post('/api/sync-all', requireAuth, async (req, res) => {
-  console.log(`[API-SYNC-ALL] 🌐 Global sync requested by user`);
+  const client = req.headers['x-app-source'] === 'mobile' ? '📱 [APP]' : '💻 [WEB]';
+  console.log(`[API-SYNC-ALL] ${client} 🌐 Global sync requested by user`);
   try {
     const creds = await new Promise((resolve) => credsDb.all('SELECT * FROM saved_credentials WHERE userId = ?', [req.user.userId], (err, rows) => resolve(rows || [])));
     if (creds.length === 0) return res.json({success: false, message: 'אין חשבונות שמורים בכספת.'});
@@ -810,7 +856,7 @@ app.post('/api/sync-all', requireAuth, async (req, res) => {
 
     let anySuccess = false;
     for (const saved of creds) {
-      console.log(`[API-SYNC-ALL] 🔄 Processing ${saved.companyId}...`);
+      console.log(`[API-SYNC-ALL] ${client} 🔄 Processing ${saved.companyId}...`);
       const durationInt = parseInt(saved.scrapeDuration) || parseInt(globalScrapeDuration) || 1;
       const decUser = decryptData(saved.username, botKey);
       const decPass = decryptData(saved.password, botKey);
@@ -824,11 +870,11 @@ app.post('/api/sync-all', requireAuth, async (req, res) => {
           // VITAL FIX: Encrypting with Bot Key so both site and telegram can read!
           await saveScrapeResult(scrapeResult, saved.companyId, mappings, durationInt, req.user.userId, botKey); 
           anySuccess = true; 
-          console.log(`[API-SYNC-ALL] ✅ Completed ${saved.companyId}`);
+          console.log(`[API-SYNC-ALL] ${client} ✅ Completed ${saved.companyId}`);
         }
-      } catch(e) { console.error(`[API-SYNC-ALL] ❌ Error in ${saved.companyId}:`, e.message); }
+      } catch(e) { console.error(`[API-SYNC-ALL] ${client} ❌ Error in ${saved.companyId}:`, e.message); }
     }
-    console.log(`[API-SYNC-ALL] 🏁 Global sync finished.`);
+    console.log(`[API-SYNC-ALL] ${client} 🏁 Global sync finished.`);
     res.json({ success: anySuccess, message: anySuccess ? 'הסנכרון הושלם' : 'שגיאה בחלק מהחשבונות' });
   } catch(e) { res.status(500).json({ success: false, message: e.message }); }
 });

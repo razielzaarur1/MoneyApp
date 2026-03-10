@@ -15,6 +15,8 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
+        // השורה שמוסיפים כדי להעלים את הכפתורים למטה:
+        tabBarStyle: { display: 'none' }, 
       }}>
       <Tabs.Screen
         name="index"

@@ -1,17 +1,13 @@
 // ==========================================
 // PART 1: IMPORTS, STYLES & ERROR BOUNDARY
 // ==========================================
-
 import React, { useState, useEffect, useMemo } from 'react';
+import * as Icons from 'lucide-react'; // ייבוא כל האייקונים כדי שנוכל לבחור מתוכם דינמית
 import { 
   Home, CreditCard, ListOrdered, PieChart, Settings, RefreshCw, AlertCircle, CheckCircle2, TrendingUp, TrendingDown,
   Building, Wallet, Plus, Shield, ChevronLeft, ChevronDown, ChevronUp, ChevronRight, ShoppingBag, Utensils, Car, 
   Link as LinkIcon, Unlink, MoreHorizontal, Calendar, Edit2, X, Tag as TagIcon, Check, Lock, Clock, AlignLeft, 
-  FileText, Save, Download, Info, Sun, Moon, Activity, ArrowDownRight, ArrowUpRight, Trash2, View, Unlock,
-  Heart, Users, Ticket, Plane, Briefcase, Landmark, /* הנה האייקונים שהיו חסרים */
-  Tv, Key, Droplet, Flame, Hammer, Sparkles, Flower, Sofa, Monitor, Shirt, Watch, Wind, Fuel, Bus, ScrollText, 
-  Wrench, Route, Stethoscope, HeartPulse, Pill, Eye, Scissors, Dumbbell, Baby, GraduationCap, Tent, User, Gamepad2, 
-  Package, HandHeart, Dog, Gift, Music, BookOpen, Bike, Trophy, Pizza, Coffee, Bed, Map, Mail, Printer, Lightbulb, Percent, Zap
+  FileText, Save, Download, Info, Sun, Moon, Activity, ArrowDownRight, ArrowUpRight, Trash2, View, Unlock
 } from 'lucide-react';
 
 const themeStyles = `
@@ -40,47 +36,27 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// ==========================================
-// PART 2: CATEGORY DATA & ICONS
-// ==========================================
-const IconMap = { Home, ShoppingBag, Car, Heart, Users, Ticket, Utensils, Plane, Briefcase, Landmark, MoreHorizontal, Wallet, Tag: TagIcon };
-
-const INCOMES = [
-  { id: 'inc_salary', name: 'משכורת', icon: Wallet, color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', type: 'income' },
-  { id: 'inc_allowance', name: 'קצבה או מלגה', icon: Landmark, color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', type: 'income' },
-  { id: 'inc_property', name: 'הכנסה מנכס', icon: Home, color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', type: 'income' },
-  { id: 'inc_business', name: 'הכנסה מעסק', icon: Briefcase, color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', type: 'income' },
-  { id: 'inc_dividends', name: 'דיווידנדים ורווחים', icon: TrendingUp, color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', type: 'income' },
-  { id: 'inc_misc', name: 'הכנסות שונות', icon: MoreHorizontal, color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', type: 'income' }
-];
-
-const EXPENSES = [
-  { id: 'exp_household', name: 'משק בית', icon: Home, color: 'text-indigo-500 dark:text-indigo-400', bg: 'bg-indigo-500/10 dark:bg-indigo-500/20', type: 'expense', subs: [{ id: 'hh_telecom', name: 'טלפון ואינטרנט', icon: Tv }, { id: 'hh_mortgage', name: 'משכנתא', icon: Key }, { id: 'hh_rent', name: 'דמי שכירות', icon: Home }, { id: 'hh_taxes', name: 'ארנונה', icon: Landmark }, { id: 'hh_committee', name: 'ועד בית', icon: Users }, { id: 'hh_water', name: 'מים', icon: Droplet }, { id: 'hh_gas', name: 'גז והסקה', icon: Flame }, { id: 'hh_electricity', name: 'חשמל', icon: Zap }, { id: 'hh_insurance', name: 'ביטוח דירה', icon: Shield }, { id: 'hh_maintenance', name: 'אחזקת בית', icon: Hammer }, { id: 'hh_cleaning', name: 'ניקיון וכביסה', icon: Sparkles }, { id: 'hh_gardening', name: 'גינון ונוי', icon: Flower }, { id: 'hh_misc', name: 'משק בית - שונות', icon: MoreHorizontal }] },
-  { id: 'exp_shopping', name: 'עושים קניות', icon: ShoppingBag, color: 'text-pink-500 dark:text-pink-400', bg: 'bg-pink-500/10 dark:bg-pink-500/20', type: 'expense', subs: [{ id: 'shop_supermarket', name: 'סופר ומכולת', icon: ShoppingBag }, { id: 'shop_furniture', name: 'ריהוט לבית', icon: Sofa }, { id: 'shop_electronics', name: 'אלקטרוניקה', icon: Monitor }, { id: 'shop_clothing', name: 'בגדים והנעלה', icon: Shirt }, { id: 'shop_jewelry', name: 'תכשיטים ושעונים', icon: Watch }, { id: 'shop_tobacco', name: 'טבק ועישון', icon: Wind }, { id: 'shop_misc', name: 'קניות - שונות', icon: MoreHorizontal }] },
-  { id: 'exp_transport', name: 'רכב ותחבורה', icon: Car, color: 'text-orange-500 dark:text-orange-400', bg: 'bg-orange-500/10 dark:bg-orange-500/20', type: 'expense', subs: [{ id: 'trans_fuel', name: 'דלק וטעינה', icon: Fuel }, { id: 'trans_rental', name: 'השכרת רכב', icon: Car }, { id: 'trans_public', name: 'תחבורה ציבורית', icon: Bus }, { id: 'trans_parking', name: 'חנייה', icon: Map }, { id: 'trans_fines', name: 'קנסות', icon: ScrollText }, { id: 'trans_garage', name: 'מוסך ואחזקה', icon: Wrench }, { id: 'trans_tolls', name: 'כבישי אגרה', icon: Route }, { id: 'trans_insurance', name: 'ביטוח רכב', icon: Shield }, { id: 'trans_misc', name: 'תחבורה - שונות', icon: MoreHorizontal }] },
-  { id: 'exp_health', name: 'בריאות וטיפוח', icon: Heart, color: 'text-rose-500 dark:text-rose-400', bg: 'bg-rose-500/10 dark:bg-rose-500/20', type: 'expense', subs: [{ id: 'hlth_alternative', name: 'רפואה משלימה', icon: Activity }, { id: 'hlth_services', name: 'ייעוץ וטיפול', icon: Stethoscope }, { id: 'hlth_insurance', name: 'ביטוחי בריאות', icon: HeartPulse }, { id: 'hlth_dental', name: 'רפואת שיניים', icon: Activity }, { id: 'hlth_optical', name: 'אופטיקה', icon: Eye }, { id: 'hlth_pharmacy', name: 'בתי מרקחת', icon: Pill }, { id: 'hlth_beauty', name: 'טיפולי יופי', icon: Scissors }, { id: 'hlth_fitness', name: 'כושר', icon: Dumbbell }, { id: 'hlth_misc', name: 'בריאות - שונות', icon: MoreHorizontal }] },
-  { id: 'exp_family', name: 'משפחה והשכלה', icon: Users, color: 'text-teal-500 dark:text-teal-400', bg: 'bg-teal-500/10 dark:bg-teal-500/20', type: 'expense', subs: [{ id: 'fam_school', name: 'גן ובית ספר', icon: Baby }, { id: 'fam_higher_ed', name: 'השכלה גבוהה', icon: GraduationCap }, { id: 'fam_activities', name: 'חוגים וקייטנות', icon: Tent }, { id: 'fam_babysitter', name: 'בייביסיטר', icon: User }, { id: 'fam_toys', name: 'משחקים ודמי כיס', icon: Gamepad2 }, { id: 'fam_baby', name: 'מוצרים לגיל הרך', icon: Package }, { id: 'fam_support', name: 'תמיכה ומזונות', icon: HandHeart }, { id: 'fam_pets', name: 'חיות מחמד', icon: Dog }, { id: 'fam_misc', name: 'משפחה - שונות', icon: MoreHorizontal }] },
-  { id: 'exp_leisure', name: 'פנאי ותרבות', icon: Ticket, color: 'text-purple-500 dark:text-purple-400', bg: 'bg-purple-500/10 dark:bg-purple-500/20', type: 'expense', subs: [{ id: 'leis_shows', name: 'הופעות וקולנוע', icon: Ticket }, { id: 'leis_gifts', name: 'מתנות ואירועים', icon: Gift }, { id: 'leis_music', name: 'מוזיקה וקריאה', icon: Music }, { id: 'leis_workshops', name: 'סדנאות', icon: BookOpen }, { id: 'leis_hobbies', name: 'תחביבים וספורט', icon: Bike }, { id: 'leis_sports', name: 'אירועי ספורט', icon: Trophy }, { id: 'leis_misc', name: 'פנאי - שונות', icon: MoreHorizontal }] },
-  { id: 'exp_dining', name: 'אוכלים בחוץ', icon: Utensils, color: 'text-amber-500 dark:text-amber-400', bg: 'bg-amber-500/10 dark:bg-amber-500/20', type: 'expense', subs: [{ id: 'dine_fastfood', name: 'מזון מהיר ומשלוחים', icon: Pizza }, { id: 'dine_restaurants', name: 'מסעדות ופאבים', icon: Coffee }, { id: 'dine_misc', name: 'אוכלים בחוץ - שונות', icon: Utensils }] },
-  { id: 'exp_travel', name: 'חופשות וטיולים', icon: Plane, color: 'text-sky-500 dark:text-sky-400', bg: 'bg-sky-500/10 dark:bg-sky-500/20', type: 'expense', subs: [{ id: 'trvl_flights', name: 'טיסות', icon: Plane }, { id: 'trvl_attractions', name: 'אטרקציות', icon: Map }, { id: 'trvl_accommodation', name: 'לינה', icon: Bed }, { id: 'trvl_misc', name: 'חופשות - שונות', icon: MoreHorizontal }] },
-  { id: 'exp_business', name: 'שירותים עיסקיים', icon: Briefcase, color: 'text-slate-500 dark:text-slate-400', bg: 'bg-slate-500/10 dark:bg-slate-500/20', type: 'expense', subs: [{ id: 'biz_delivery', name: 'דואר ומשלוחים', icon: Mail }, { id: 'biz_legal', name: 'הנה"ח ומשפטי', icon: FileText }, { id: 'biz_marketing', name: 'שיווק ופרסום', icon: Printer }, { id: 'biz_consulting', name: 'ייעוץ והשתלמויות', icon: Lightbulb }, { id: 'biz_misc', name: 'עסקי - שונות', icon: MoreHorizontal }] },
-  { id: 'exp_financial', name: 'שירותים פיננסיים', icon: Landmark, color: 'text-cyan-600', bg: 'bg-cyan-50', type: 'expense', subs: [{ id: 'fin_loans', name: 'פירעון הלוואה', icon: Percent }, { id: 'fin_fees', name: 'עמלות', icon: TrendingDown }, { id: 'fin_interest', name: 'תשלומי ריביות', icon: TrendingDown }, { id: 'fin_misc', name: 'פיננסי - שונות', icon: MoreHorizontal }] },
-  { id: 'exp_misc', name: 'שונות', icon: MoreHorizontal, color: 'text-gray-500 dark:text-gray-400', bg: 'bg-gray-500/10 dark:bg-gray-500/20', type: 'expense', subs: [{ id: 'misc_taxes', name: 'מיסים ורשויות', icon: Landmark }, { id: 'misc_religion', name: 'דת ותרומות', icon: HandHeart }, { id: 'misc_gambling', name: 'הימורים', icon: Trophy }, { id: 'misc_uncategorized', name: 'ללא סיווג', icon: MoreHorizontal }, { id: 'misc_other', name: 'שונות', icon: MoreHorizontal }] }
-];
-const ALL_CATEGORIES = [...INCOMES, ...EXPENSES];
+// קומפוננטה חכמה שמציירת אייקון מתוך טקסט (מתוך ה-JSON)
+const DynamicIcon = ({ name, ...props }) => {
+  const IconComponent = Icons[name] || Icons.HelpCircle;
+  return <IconComponent {...props} />;
+};
 
 // ==========================================
-// PART 3: UTILS, AUTH FETCH & SHARED UI
+// PART 2: UTILS, AUTH FETCH & SHARED UI
 // ==========================================
-const getCategoryDetails = (subCatId) => {
-  if (!subCatId) return { mainCat: EXPENSES[10], subCat: EXPENSES[10].subs[3] }; 
-  const incomeCat = INCOMES.find(inc => inc.id === subCatId);
+const getCategoryDetails = (subCatId, categories) => {
+  const defaultCat = { id: 'misc_uncategorized', name: 'ללא סיווג', icon: 'MoreHorizontal', color: 'text-slate-500', bg: 'bg-slate-500/10', type: 'expense' };
+  if (!subCatId || !categories) return { mainCat: defaultCat, subCat: defaultCat }; 
+  
+  const incomeCat = (categories.incomes || []).find(inc => inc.id === subCatId);
   if (incomeCat) return { mainCat: incomeCat, subCat: incomeCat };
-  for (const mainCat of EXPENSES) {
+  
+  for (const mainCat of (categories.expenses || [])) {
     const subCat = mainCat.subs?.find(sub => sub.id === subCatId);
     if (subCat) return { mainCat, subCat };
   }
-  return { mainCat: EXPENSES[10], subCat: EXPENSES[10].subs[3] };
+  return { mainCat: defaultCat, subCat: defaultCat };
 };
 
 const getCustomMonthYear = (dateString, startDay) => {
@@ -113,7 +89,6 @@ const calculateUpcomingCharge = (acc, transactions) => {
   return upcomingTxsSum > scraperBalance ? upcomingTxsSum : scraperBalance;
 };
 
-// Custom Fetch Wrapper for Authorization
 const authFetch = async (url, options = {}) => {
   const token = sessionStorage.getItem('app_token');
   const headers = { 'Content-Type': 'application/json', ...options.headers };
@@ -145,15 +120,6 @@ function StatCard({ title, amount, trend, icon, color }) {
   );
 }
 
-function SettingsRow({ icon, label, description }) {
-  return (
-    <div className="w-full flex items-center p-6 hover:bg-[var(--color-bg-card-hover)] transition-colors border-b border-[var(--color-border)] last:border-0 group">
-      <div className="p-3 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl text-[var(--color-text-muted)] group-hover:text-indigo-500 transition-colors ml-4">{icon || <Settings size={20}/>}</div>
-      <div><h3 className="text-lg text-[var(--color-text-main)] mb-1">{label}</h3><p className="text-sm text-[var(--color-text-muted)]">{description}</p></div>
-    </div>
-  );
-}
-
 function MobileNavItem({ icon, label, active, onClick }) {
   return (
     <button onClick={onClick} className={`flex flex-col items-center justify-center w-16 transition-colors ${active ? 'text-indigo-600' : 'text-[var(--color-text-muted)]'}`}>
@@ -164,7 +130,7 @@ function MobileNavItem({ icon, label, active, onClick }) {
 
 
 // ==========================================
-// PART 4: AUTH SCREEN
+// PART 3: AUTH SCREEN
 // ==========================================
 function AuthScreen({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
@@ -214,12 +180,13 @@ function AuthScreen({ onLogin }) {
 
 
 // ==========================================
-// PART 5: MAIN APP SHELL & STATE
+// PART 4: MAIN APP SHELL & STATE
 // ==========================================
 function MainApp({ onLogout }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [transactions, setTransactions] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [categories, setCategories] = useState({ incomes: [], expenses: [] }); // קטגוריות דינמיות
   const [appSettings, setAppSettings] = useState({ scrape_duration: '1', month_start_date: '1' });
   const [selectedMonth, setSelectedMonth] = useState('');
   const [loading, setLoading] = useState(true);
@@ -233,7 +200,6 @@ function MainApp({ onLogout }) {
   const [selectedViewTx, setSelectedViewTx] = useState(null);
   const [editingAccount, setEditingAccount] = useState(null);
   const [syncModalType, setSyncModalType] = useState(null);
-  const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
   const [isAddTxModalOpen, setIsAddTxModalOpen] = useState(false);
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
@@ -248,6 +214,7 @@ function MainApp({ onLogout }) {
       setAccounts(data.accounts || []);
       const settings = data.settings || { scrape_duration: '1', month_start_date: '1' };
       setAppSettings(settings);
+      if (data.rawCategories) setCategories(data.rawCategories);
       
       const monthStart = settings.month_start_date || '1';
       const months = new Set(mappedTransactions.map(tx => getCustomMonthYear(tx.date, monthStart)).filter(Boolean));
@@ -339,7 +306,6 @@ function MainApp({ onLogout }) {
     setEditingAccount(null);
   };
 
-  // תמיכה בחיפוש שם לארנק וירטואלי
   const getAccountName = (accId) => {
     if (accId === 'wallet') return 'ארנק (מזומן)';
     return accounts.find(a => a.id === accId)?.name || accId;
@@ -349,7 +315,7 @@ function MainApp({ onLogout }) {
     transactions, filteredTransactions, accounts, getCategoryDetails, selectedMonth, setSelectedMonth, availableMonths, 
     allExistingTags, appSettings, handleUpdateSetting, theme, toggleTheme, onTxClick: setSelectedTx, getAccountName, 
     handleLinkTransactions, setEditingAccount, onAddClick: setSyncModalType, handleDeleteAccount, handleSyncAccount, getCustomMonthYear, onViewTxClick: setSelectedViewTx,
-    handleDeleteUser, setIsChangePassModalOpen, showToast, onAddManualTx: () => setIsAddTxModalOpen(true)
+    handleDeleteUser, showToast, onAddManualTx: () => setIsAddTxModalOpen(true), categories
   };
 
   const NAV_ITEMS = [
@@ -425,8 +391,7 @@ function MainApp({ onLogout }) {
         {selectedViewTx && <TransactionViewModal tx={selectedViewTx} {...sharedProps} onClose={() => setSelectedViewTx(null)} onEdit={(t) => {setSelectedViewTx(null); setSelectedTx(t);}} />}
         {editingAccount && <EditAccountModal account={editingAccount} onClose={() => setEditingAccount(null)} onSave={handleEditAccountSubmit} />}
         {syncModalType && <SyncModal type={syncModalType} scrapeDuration={appSettings.scrape_duration} onClose={() => setSyncModalType(null)} onSuccess={() => { setSyncModalType(null); fetchData(); }} />}
-        {isChangePassModalOpen && <ChangePasswordModal onClose={() => setIsChangePassModalOpen(false)} showToast={showToast} />}
-        {isAddTxModalOpen && <AddTransactionModal accounts={accounts} onClose={() => setIsAddTxModalOpen(false)} onSave={handleAddManualTransaction} getCategoryDetails={getCategoryDetails} />}
+        {isAddTxModalOpen && <AddTransactionModal accounts={accounts} onClose={() => setIsAddTxModalOpen(false)} onSave={handleAddManualTransaction} getCategoryDetails={getCategoryDetails} categories={categories} />}
       </div>
     </>
   );
@@ -434,19 +399,19 @@ function MainApp({ onLogout }) {
 
 
 // ==========================================
-// PART 6: OVERVIEW VIEW
+// PART 5: OVERVIEW VIEW
 // ==========================================
-function OverviewView({ filteredTransactions, accounts, onTxClick, getCategoryDetails, getAccountName, transactions }) {
+function OverviewView({ filteredTransactions, accounts, onTxClick, getCategoryDetails, getAccountName, transactions, categories }) {
   const totalBalance = accounts.filter(a => a.type === 'bank').reduce((sum, a) => sum + Math.max(0, a.balance || 0), 0);
   const monthIncome = filteredTransactions.reduce((sum, t) => { 
     if (t.categoryId === 'misc_uncategorized') return t.amount > 0 ? sum + (t.amount||0) : sum;
-    const { mainCat } = getCategoryDetails(t.categoryId); 
+    const { mainCat } = getCategoryDetails(t.categoryId, categories); 
     return mainCat.type === 'income' ? sum + (t.amount||0) : sum; 
   }, 0);
 
   const monthExpenses = filteredTransactions.reduce((sum, t) => { 
     if (t.categoryId === 'misc_uncategorized') return t.amount < 0 ? sum + (t.amount||0) : sum;
-    const { mainCat } = getCategoryDetails(t.categoryId); 
+    const { mainCat } = getCategoryDetails(t.categoryId, categories); 
     return mainCat.type !== 'income' ? sum + (t.amount||0) : sum; 
   }, 0);
   const monthlyBalance = monthIncome - Math.abs(monthExpenses);
@@ -471,11 +436,13 @@ function OverviewView({ filteredTransactions, accounts, onTxClick, getCategoryDe
                 <thead><tr className="bg-[var(--color-bg-input)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] text-sm"><th className="p-3 font-normal">תאריך</th><th className="p-3 font-normal text-center">סמל</th><th className="p-3 font-normal">שם העסק</th><th className="p-3 font-normal">קטגוריה</th><th className="p-3 font-normal">חשבון מחיוב</th><th className="p-3 font-normal text-center">סכום</th></tr></thead>
                 <tbody className="divide-y divide-[var(--color-border)]">
                   {filteredTransactions.slice(0, 6).map((tx) => {
-                    const { mainCat, subCat } = getCategoryDetails(tx.categoryId); const Icon = subCat?.icon || mainCat?.icon || TagIcon; const isIncome = mainCat.type === 'income' || tx.amount > 0;
+                    const { mainCat, subCat } = getCategoryDetails(tx.categoryId, categories); 
+                    const iconName = subCat?.icon || mainCat?.icon || 'Tag'; 
+                    const isIncome = mainCat.type === 'income' || tx.amount > 0;
                     return (
                       <tr key={tx.id} onClick={() => onTxClick(tx)} className="hover:bg-[var(--color-bg-card-hover)] transition-colors cursor-pointer text-sm text-[var(--color-text-main)]">
                         <td className="p-3 text-[var(--color-text-muted)] whitespace-nowrap">{tx.date}</td>
-                        <td className="p-3 text-center"><div className={`w-8 h-8 rounded-lg inline-flex items-center justify-center ${mainCat.bg} ${mainCat.color}`}><Icon size={16} /></div></td>
+                        <td className="p-3 text-center"><div className={`w-8 h-8 rounded-lg inline-flex items-center justify-center ${mainCat.bg} ${mainCat.color}`}><DynamicIcon name={iconName} size={16} /></div></td>
                         <td className="p-3"><div className="flex items-center gap-2">{tx.description}{tx.linkedTransactionId && <LinkIcon size={12} className="text-indigo-500"/>}{tx.installments && <span className="bg-indigo-500/10 text-indigo-500 text-[10px] px-1.5 py-0.5 rounded">תשלום {tx.installments.number}/{tx.installments.total}</span>}{tx.status === 'pending' && <span className="bg-orange-500/10 text-orange-500 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1"><Clock size={10}/> ממתין</span>}</div></td>
                         <td className="p-3 text-[var(--color-text-muted)]">{mainCat.type === 'income' ? mainCat.name : `${mainCat.name} • ${subCat?.name}`}</td><td className="p-3 text-[var(--color-text-muted)]">{getAccountName(tx.accountId || tx.account)}</td><td className={`p-3 text-center ${isIncome ? 'text-emerald-500' : ''}`} dir="ltr">{isIncome ? '+' : ''}{(tx.amount||0).toFixed(2)} ₪</td>
                       </tr>
@@ -498,15 +465,15 @@ function OverviewView({ filteredTransactions, accounts, onTxClick, getCategoryDe
 }
 
 // ==========================================
-// PART 7: TRANSACTIONS VIEW
+// PART 6: TRANSACTIONS VIEW
 // ==========================================
-function TransactionsView({ filteredTransactions, onTxClick, getCategoryDetails, getAccountName, appSettings, getCustomMonthYear, onAddManualTx }) {
+function TransactionsView({ filteredTransactions, onTxClick, getCategoryDetails, getAccountName, appSettings, getCustomMonthYear, onAddManualTx, categories }) {
   const [filterType, setFilterType] = useState('all'); 
   const displayedTxs = useMemo(() => {
     let txs = filteredTransactions;
-    if (filterType !== 'all') { txs = filteredTransactions.filter(t => { const { mainCat } = getCategoryDetails(t.categoryId); return mainCat.type === filterType; }); }
+    if (filterType !== 'all') { txs = filteredTransactions.filter(t => { const { mainCat } = getCategoryDetails(t.categoryId, categories); return mainCat.type === filterType; }); }
     return txs.sort((a,b) => { const da = a.date.split('/').reverse().join(''); const db = b.date.split('/').reverse().join(''); return db.localeCompare(da); });
-  }, [filteredTransactions, filterType, getCategoryDetails]);
+  }, [filteredTransactions, filterType, getCategoryDetails, categories]);
 
   const renderGroupedRows = () => {
     const rows = []; let currentMonth = null; let currentDay = null;
@@ -524,11 +491,14 @@ function TransactionsView({ filteredTransactions, onTxClick, getCategoryDetails,
         currentDay = txDay;
       }
 
-      const { mainCat, subCat } = getCategoryDetails(tx.categoryId); const Icon = subCat?.icon || mainCat?.icon || TagIcon; const isIncome = mainCat.type === 'income' || tx.amount > 0;
+      const { mainCat, subCat } = getCategoryDetails(tx.categoryId, categories); 
+      const iconName = subCat?.icon || mainCat?.icon || 'Tag'; 
+      const isIncome = mainCat.type === 'income' || tx.amount > 0;
+      
       rows.push(
         <tr key={tx.id} onClick={() => onTxClick(tx)} className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-card-hover)] transition-colors cursor-pointer text-[var(--color-text-main)]">
           <td className="p-4 text-base text-[var(--color-text-muted)] whitespace-nowrap">{tx.date}</td>
-          <td className="p-4 text-center"><div className={`w-10 h-10 rounded-xl inline-flex items-center justify-center ${mainCat.bg} ${mainCat.color}`}><Icon size={20} /></div></td>
+          <td className="p-4 text-center"><div className={`w-10 h-10 rounded-xl inline-flex items-center justify-center ${mainCat.bg} ${mainCat.color}`}><DynamicIcon name={iconName} size={20} /></div></td>
           <td className="p-4"><div className="flex items-center gap-2 text-base font-medium">{tx.description}{tx.installments && <span className="bg-indigo-500/10 text-indigo-500 text-xs px-2 py-0.5 rounded">תשלום {tx.installments.number}/{tx.installments.total}</span>}{tx.status === 'pending' && <span className="bg-orange-500/10 text-orange-500 text-xs px-2 py-0.5 rounded flex items-center gap-1"><Clock size={12}/> ממתין</span>}{tx.linkedTransactionId && <LinkIcon size={14} className="text-indigo-500"/>}</div>
             {(tx.tags || tx.notes) && (<div className="flex gap-2 mt-1.5">{tx.tags && tx.tags.split(',').filter(t=>t.trim()).map(tag => <span key={tag} className="text-sm bg-[var(--color-bg-input)] border border-[var(--color-border)] text-[var(--color-text-muted)] px-2 py-0.5 rounded">{tag.trim()}</span>)}{tx.notes && <span className="text-sm bg-[var(--color-bg-input)] border border-[var(--color-border)] text-[var(--color-text-muted)] px-2 py-0.5 rounded flex items-center gap-1"><AlignLeft size={14}/> הערה</span>}</div>)}
           </td>
@@ -565,21 +535,21 @@ function TransactionsView({ filteredTransactions, onTxClick, getCategoryDetails,
     </div>
   );
 }
+
 // ==========================================
-// PART 8: REPORTS VIEW
+// PART 7: REPORTS VIEW
 // ==========================================
-function ReportsView({ filteredTransactions, getCategoryDetails, onViewTxClick, getAccountName }) {
+function ReportsView({ filteredTransactions, getCategoryDetails, onViewTxClick, getAccountName, categories }) {
   const [expandedMainCat, setExpandedMainCat] = useState(null);
   
-  // כאן כלולים התיקונים של החישובים מהשלב הקודם!
   const incomes = filteredTransactions.filter(t => { 
     if (t.categoryId === 'misc_uncategorized') return t.amount > 0;
-    const { mainCat } = getCategoryDetails(t.categoryId); 
+    const { mainCat } = getCategoryDetails(t.categoryId, categories); 
     return mainCat.type === 'income'; 
   });
   const expenses = filteredTransactions.filter(t => { 
     if (t.categoryId === 'misc_uncategorized') return t.amount < 0;
-    const { mainCat } = getCategoryDetails(t.categoryId); 
+    const { mainCat } = getCategoryDetails(t.categoryId, categories); 
     return mainCat.type !== 'income'; 
   });
 
@@ -589,26 +559,26 @@ function ReportsView({ filteredTransactions, getCategoryDetails, onViewTxClick, 
   const groupedExpenses = useMemo(() => {
     const grouped = {};
     expenses.forEach(t => {
-      const { mainCat, subCat } = getCategoryDetails(t.categoryId);
+      const { mainCat, subCat } = getCategoryDetails(t.categoryId, categories);
       if (!grouped[mainCat.id]) grouped[mainCat.id] = { mainCat, amount: 0, subs: {} };
-      grouped[mainCat.id].amount -= (t.amount || 0); // חיסור של המינוס כדי לקבל פלוס או זיכוי
+      grouped[mainCat.id].amount -= (t.amount || 0); 
       if(!grouped[mainCat.id].subs[subCat.id]) grouped[mainCat.id].subs[subCat.id] = { subCat, amount: 0, txs: [] };
       grouped[mainCat.id].subs[subCat.id].amount -= (t.amount || 0);
       grouped[mainCat.id].subs[subCat.id].txs.push(t);
     });
     return Object.values(grouped).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
-  }, [expenses, getCategoryDetails]);
+  }, [expenses, getCategoryDetails, categories]);
 
   const groupedIncomes = useMemo(() => {
     const grouped = {};
     incomes.forEach(t => {
-      const { mainCat } = getCategoryDetails(t.categoryId);
+      const { mainCat } = getCategoryDetails(t.categoryId, categories);
       if (!grouped[mainCat.id]) grouped[mainCat.id] = { mainCat, amount: 0, txs: [] };
       grouped[mainCat.id].amount += (t.amount || 0);
       grouped[mainCat.id].txs.push(t);
     });
     return Object.values(grouped).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
-  }, [incomes, getCategoryDetails]);
+  }, [incomes, getCategoryDetails, categories]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -617,21 +587,20 @@ function ReportsView({ filteredTransactions, getCategoryDetails, onViewTxClick, 
           <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-bg-input)]"><h2 className="text-lg text-[var(--color-text-muted)] mb-1">סה״כ הוצאות</h2><p className="text-4xl text-rose-500" dir="ltr">{(totalExpense||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</p></div>
           <div className="divide-y divide-[var(--color-border)]">
             {groupedExpenses.length === 0 ? <p className="text-center text-[var(--color-text-muted)] py-8">אין הוצאות</p> : groupedExpenses.map(item => {
-              const Icon = item.mainCat.icon || TagIcon; const isExpanded = expandedMainCat === item.mainCat.id;
+              const isExpanded = expandedMainCat === item.mainCat.id;
               return (
                 <div key={item.mainCat.id}>
                   <button onClick={() => setExpandedMainCat(isExpanded ? null : item.mainCat.id)} className="w-full flex justify-between items-center p-5 hover:bg-[var(--color-bg-card-hover)] transition-colors group">
-                    <div className="flex items-center gap-4"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.mainCat.bg} transition-all`}><Icon size={18} className={item.mainCat.color} strokeWidth={1.5}/></div><span className="text-lg font-bold text-[var(--color-text-main)]">{item.mainCat.name}</span></div>
+                    <div className="flex items-center gap-4"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.mainCat.bg} transition-all`}><DynamicIcon name={item.mainCat.icon} size={18} className={item.mainCat.color} strokeWidth={1.5}/></div><span className="text-lg font-bold text-[var(--color-text-main)]">{item.mainCat.name}</span></div>
                     <div className="flex items-center gap-3"><span className="text-lg font-bold text-[var(--color-text-main)]" dir="ltr">{(Math.abs(item.amount)||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span><ChevronDown size={18} className={`text-[var(--color-text-muted)] transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} /></div>
                   </button>
                   <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[1500px]' : 'max-h-0'}`}>
                     <div className="p-2 bg-[var(--color-bg-input)] border-t border-[var(--color-border)]">
                       {Object.values(item.subs).sort((a,b) => Math.abs(b.amount) - Math.abs(a.amount)).map(sub => {
-                        const SubIcon = sub.subCat.icon || TagIcon;
                         return (
                           <div key={sub.subCat.id} className="p-3 rounded-lg hover:bg-[var(--color-bg-card)] transition-all group">
                             <div className="flex justify-between items-center mb-2">
-                              <div className="flex items-center gap-3 text-[var(--color-text-main)]"><SubIcon size={18} className="text-[var(--color-text-muted)]" /><span className="text-base font-bold">{sub.subCat.name}</span></div>
+                              <div className="flex items-center gap-3 text-[var(--color-text-main)]"><DynamicIcon name={sub.subCat.icon} size={18} className="text-[var(--color-text-muted)]" /><span className="text-base font-bold">{sub.subCat.name}</span></div>
                               <span className="text-base font-bold text-[var(--color-text-main)]" dir="ltr">{(Math.abs(sub.amount)||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span>
                             </div>
                             <div className="pl-8 pr-2 space-y-2">
@@ -659,10 +628,9 @@ function ReportsView({ filteredTransactions, getCategoryDetails, onViewTxClick, 
           <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-bg-input)]"><h2 className="text-lg text-[var(--color-text-muted)] mb-1">סה״כ הכנסות</h2><p className="text-4xl text-emerald-500" dir="ltr">{totalIncome > 0 ? '+' : ''}{(totalIncome||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</p></div>
           <div className="divide-y divide-[var(--color-border)]">
             {groupedIncomes.length === 0 ? <p className="text-center text-[var(--color-text-muted)] py-8">אין הכנסות</p> : groupedIncomes.map(item => {
-              const Icon = item.mainCat.icon || TagIcon;
               return (
                 <div key={item.mainCat.id} className="w-full flex flex-col p-5 hover:bg-[var(--color-bg-card-hover)] transition-colors group border-b border-[var(--color-border)] last:border-0">
-                  <div className="flex justify-between items-center"><div className="flex items-center gap-4"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.mainCat.bg}`}><Icon size={18} className={item.mainCat.color} strokeWidth={1.5} /></div><span className="text-lg font-bold text-[var(--color-text-main)]">{item.mainCat.name}</span></div><span className="text-emerald-500 text-lg font-bold" dir="ltr">+{(item.amount||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span></div>
+                  <div className="flex justify-between items-center"><div className="flex items-center gap-4"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.mainCat.bg}`}><DynamicIcon name={item.mainCat.icon} size={18} className={item.mainCat.color} strokeWidth={1.5} /></div><span className="text-lg font-bold text-[var(--color-text-main)]">{item.mainCat.name}</span></div><span className="text-emerald-500 text-lg font-bold" dir="ltr">+{(item.amount||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span></div>
                   <div className="mt-4 pl-14 pr-2 space-y-2">
                     {item.txs.map(tx => (
                       <div key={tx.id} onClick={() => onViewTxClick(tx)} className="flex justify-between text-sm p-2 hover:bg-[var(--color-bg-input)] rounded-lg cursor-pointer">
@@ -684,7 +652,7 @@ function ReportsView({ filteredTransactions, getCategoryDetails, onViewTxClick, 
 }
 
 // ==========================================
-// PART 9: ACCOUNTS, BUDGET & SETTINGS VIEWS
+// PART 8: ACCOUNTS, BUDGET & SETTINGS VIEWS
 // ==========================================
 function AccountsView({ accounts, handleDeleteAccount, handleSyncAccount, onAddClick, transactions, setEditingAccount }) {
   const banks = accounts.filter(a => a.type === 'bank');
@@ -717,24 +685,28 @@ function AccountsView({ accounts, handleDeleteAccount, handleSyncAccount, onAddC
   );
 }
 
-function BudgetView({ filteredTransactions, getCategoryDetails }) {
+function BudgetView({ filteredTransactions, getCategoryDetails, categories }) {
   const expenses = filteredTransactions.filter(t => { 
     if (t.categoryId === 'misc_uncategorized') return t.amount < 0;
-    const { mainCat } = getCategoryDetails(t.categoryId); 
+    const { mainCat } = getCategoryDetails(t.categoryId, categories); 
     return mainCat.type !== 'income'; 
   });
   const totalExpenses = expenses.reduce((sum, t) => sum - (t.amount || 0), 0);
   const budgetLimit = 8000; const percentage = Math.min(100, Math.round((totalExpenses / budgetLimit) * 100)) || 0;
   const grouped = {}; expenses.forEach(t => { 
-    const { mainCat } = getCategoryDetails(t.categoryId); 
+    const { mainCat } = getCategoryDetails(t.categoryId, categories); 
     grouped[mainCat.id] = (grouped[mainCat.id] || 0) - (t.amount || 0); 
   });
-  const sortedCategories = Object.keys(grouped).map(catId => { const { mainCat } = getCategoryDetails(EXPENSES.find(e => e.id === catId)?.subs[0]?.id || ''); return { cat: mainCat, amount: grouped[catId], percent: Math.round((grouped[catId] / totalExpenses) * 100) || 0 }; }).sort((a, b) => b.amount - a.amount);
+  
+  const sortedCategories = Object.keys(grouped).map(catId => { 
+    const mainCat = categories.expenses?.find(e => e.id === catId) || { name: 'שונות', color: 'text-slate-500', bg: 'bg-slate-500/10', icon: 'MoreHorizontal' };
+    return { cat: mainCat, amount: grouped[catId], percent: Math.round((grouped[catId] / totalExpenses) * 100) || 0 }; 
+  }).sort((a, b) => b.amount - a.amount);
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 animate-in fade-in duration-500">
       <NeonCard className="flex flex-col justify-center items-center text-center"><h2 className="text-xl text-[var(--color-text-main)] mb-2">סה״כ הוצאות בחודש זה</h2><p className="text-[var(--color-text-muted)] mb-8">מתוך תקציב מתוכנן של ₪{budgetLimit.toLocaleString()}</p><p className="text-6xl text-rose-500 mb-10 tracking-tight" dir="ltr">{(totalExpenses||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</p><div className="w-full max-w-md bg-[var(--color-bg-input)] rounded-full h-3 mb-3 overflow-hidden"><div className={`h-full rounded-full transition-all duration-1000 ${percentage > 90 ? 'bg-rose-500' : 'bg-indigo-500'}`} style={{ width: `${percentage}%` }}></div></div><p className="text-sm text-[var(--color-text-muted)]">נוצלו {percentage}% מהתקציב</p></NeonCard>
-      <NeonCard><h2 className="text-xl text-[var(--color-text-main)] mb-8 flex items-center gap-2"><PieChart className="text-indigo-500" /> פירוט הוצאות</h2><div className="space-y-6">{sortedCategories.map((item, idx) => { const Icon = item.cat.icon || TagIcon; return (<div key={idx} className="group"><div className="flex justify-between items-end mb-2"><div className="flex items-center gap-2"><div className={`p-1.5 rounded-md ${item.cat.bg} ${item.cat.color}`}><Icon size={14} /></div><span className="text-[var(--color-text-main)] font-medium">{item.cat.name}</span><span className="text-xs text-[var(--color-text-muted)]">({item.percent}%)</span></div><span className="text-[var(--color-text-main)] font-medium" dir="ltr">{(item.amount||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span></div><div className="w-full bg-[var(--color-bg-input)] rounded-full h-2 overflow-hidden"><div className={`${item.cat.barBg} h-full rounded-full transition-all duration-1000`} style={{ width: `${item.percent}%` }}></div></div></div>) })}</div></NeonCard>
+      <NeonCard><h2 className="text-xl text-[var(--color-text-main)] mb-8 flex items-center gap-2"><PieChart className="text-indigo-500" /> פירוט הוצאות</h2><div className="space-y-6">{sortedCategories.map((item, idx) => { return (<div key={idx} className="group"><div className="flex justify-between items-end mb-2"><div className="flex items-center gap-2"><div className={`p-1.5 rounded-md ${item.cat.bg} ${item.cat.color}`}><DynamicIcon name={item.cat.icon} size={14} /></div><span className="text-[var(--color-text-main)] font-medium">{item.cat.name}</span><span className="text-xs text-[var(--color-text-muted)]">({item.percent}%)</span></div><span className="text-[var(--color-text-main)] font-medium" dir="ltr">{(item.amount||0).toLocaleString(undefined, {minimumFractionDigits:0})} ₪</span></div><div className="w-full bg-[var(--color-bg-input)] rounded-full h-2 overflow-hidden"><div className={`bg-indigo-500 h-full rounded-full transition-all duration-1000`} style={{ width: `${item.percent}%` }}></div></div></div>) })}</div></NeonCard>
     </div>
   );
 }
@@ -748,7 +720,6 @@ function SettingsView({ appSettings, handleUpdateSetting, theme, toggleTheme, ha
         </div>
         <div className="divide-y divide-[var(--color-border)]">
           
-          {/* --- הגדרת טלגרם החדשה --- */}
           <div className="p-6 flex items-center justify-between hover:bg-[var(--color-bg-card-hover)] transition-colors">
             <div>
               <h3 className="text-[var(--color-text-main)] text-lg">חיבור לטלגרם</h3>
@@ -763,7 +734,6 @@ function SettingsView({ appSettings, handleUpdateSetting, theme, toggleTheme, ha
               dir="ltr"
             />
           </div>
-          {/* ------------------------- */}
 
           <div className="p-6 flex items-center justify-between hover:bg-[var(--color-bg-card-hover)] transition-colors"><div><h3 className="text-[var(--color-text-main)] text-lg">עיצוב מערכת</h3><p className="text-sm text-[var(--color-text-muted)]">יום או לילה</p></div><button onClick={toggleTheme} className="flex items-center gap-2 bg-[var(--color-bg-input)] border border-[var(--color-border)] px-4 py-2 rounded-xl text-[var(--color-text-main)] transition-all font-medium">{theme === 'dark' ? <><Sun size={18} className="text-amber-500"/> בהיר</> : <><Moon size={18} className="text-indigo-500"/> כהה</>}</button></div>
           <div className="p-6 flex items-center justify-between hover:bg-[var(--color-bg-card-hover)] transition-colors"><div><h3 className="text-[var(--color-text-main)] text-lg">תחילת חודש תקציבי</h3><p className="text-sm text-[var(--color-text-muted)]">לפי איזה יום לסנן את החודש?</p></div><select value={appSettings.month_start_date || '1'} onChange={(e) => handleUpdateSetting('month_start_date', e.target.value)} className="w-40 p-2.5 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl outline-none focus:border-indigo-500 text-[var(--color-text-main)] cursor-pointer font-medium"><option value="1">1 לחודש (רגיל)</option><option value="10">10 לחודש (אשראי)</option><option value="15">15 לחודש</option></select></div>
@@ -785,17 +755,12 @@ function SettingsView({ appSettings, handleUpdateSetting, theme, toggleTheme, ha
   );
 }
 
-
-
-
-
-
 // ==========================================
-// PART 10: MODALS & FINAL EXPORT 
+// PART 9: MODALS 
 // ==========================================
-function TransactionViewModal({ tx, getCategoryDetails, getAccountName, onClose, onEdit }) {
-  const { mainCat, subCat } = getCategoryDetails(tx.categoryId);
-  const Icon = subCat?.icon || mainCat?.icon || TagIcon;
+function TransactionViewModal({ tx, getCategoryDetails, getAccountName, onClose, onEdit, categories }) {
+  const { mainCat, subCat } = getCategoryDetails(tx.categoryId, categories);
+  const iconName = subCat?.icon || mainCat?.icon || 'Tag';
   const isIncome = mainCat.type === 'income' || tx.amount > 0;
 
   return (
@@ -818,7 +783,7 @@ function TransactionViewModal({ tx, getCategoryDetails, getAccountName, onClose,
 
         <div className="space-y-4 mb-6">
            <div className="flex justify-between items-center text-sm"><span className="text-[var(--color-text-muted)]">תאריך עסקה:</span><span className="text-[var(--color-text-main)] font-medium">{tx.date}</span></div>
-           <div className="flex justify-between items-center text-sm"><span className="text-[var(--color-text-muted)]">קטגוריה:</span><span className="flex items-center gap-2 text-[var(--color-text-main)] font-medium"><Icon size={14} className={mainCat.color} /> {mainCat.name} {subCat && `• ${subCat.name}`}</span></div>
+           <div className="flex justify-between items-center text-sm"><span className="text-[var(--color-text-muted)]">קטגוריה:</span><span className="flex items-center gap-2 text-[var(--color-text-main)] font-medium"><DynamicIcon name={iconName} size={14} className={mainCat.color} /> {mainCat.name} {subCat && `• ${subCat.name}`}</span></div>
            {tx.notes && (<div className="bg-[var(--color-bg-input)] p-3 rounded-xl text-sm text-[var(--color-text-main)]"><span className="text-[var(--color-text-muted)] block mb-1 text-xs">הערות:</span>{tx.notes}</div>)}
            {tx.tags && (<div className="flex flex-wrap gap-2 pt-2">{tx.tags.split(',').filter(t=>t.trim()).map(tag => <span key={tag} className="text-[10px] font-bold bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 px-2 py-1 rounded">{tag.trim()}</span>)}</div>)}
         </div>
@@ -830,8 +795,8 @@ function TransactionViewModal({ tx, getCategoryDetails, getAccountName, onClose,
   );
 }
 
-function TransactionModal({ tx, getCategoryDetails, accounts, transactions, onClose, onSave, onLink, onTxClick }) {
-  const currentDetails = getCategoryDetails(tx.categoryId);
+function TransactionModal({ tx, getCategoryDetails, accounts, transactions, onClose, onSave, onLink, onTxClick, categories }) {
+  const currentDetails = getCategoryDetails(tx.categoryId, categories);
   const [notes, setNotes] = useState(tx.notes || '');
   const [tags, setTags] = useState(tx.tags ? tx.tags.split(',').map(t=>t.trim()) : []);
   const [tagInput, setTagInput] = useState('');
@@ -842,7 +807,7 @@ function TransactionModal({ tx, getCategoryDetails, accounts, transactions, onCl
   const [activeTabType, setActiveTabType] = useState(currentDetails.mainCat.type);
   const [view, setView] = useState('main'); 
   const [selectedMainCatObj, setSelectedMainCatObj] = useState(currentDetails.mainCat);
-  const [selectedSubCatId, setSelectedSubCatId] = useState(currentDetails.subCat.id);
+  const [selectedSubCatId, setSelectedSubCatId] = useState(currentDetails.subCat?.id || '');
   const acc = accounts.find(a => a.id === tx.accountId || a.id === tx.account);
   
   useEffect(() => { const originalStyle = window.getComputedStyle(document.body).overflow; document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = originalStyle; }; }, []);
@@ -853,10 +818,8 @@ function TransactionModal({ tx, getCategoryDetails, accounts, transactions, onCl
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-6">
       <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={onClose}></div>
-      {/* פתרון הגלילה: הגדרת גובה h-[90vh] או md:h-[85vh] לחלון עצמו, מה שמכריח את הגלילה הפנימית לעבוד */}
       <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-border)] w-full max-w-5xl rounded-3xl shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-[85vh] overflow-hidden animate-in zoom-in-95 duration-200">
         
-        {/* צד ימין - פירוט התנועה */}
         <div className="w-full md:w-1/2 flex flex-col border-l border-[var(--color-border)] bg-[var(--color-bg-main)] h-1/2 md:h-full overflow-hidden">
           <div className="p-6 flex justify-between items-start bg-[var(--color-bg-card)] border-b border-[var(--color-border)] shrink-0"><button onClick={onClose} className="p-2 bg-[var(--color-bg-input)] rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"><X size={20} /></button><div className="text-right flex-1 mr-4"><h3 className="text-xl text-[var(--color-text-main)] font-bold">{tx.description}</h3><p className="text-sm text-[var(--color-text-muted)] mt-1">{acc?.name || tx.account}</p></div></div>
           <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">
@@ -876,11 +839,57 @@ function TransactionModal({ tx, getCategoryDetails, accounts, transactions, onCl
           <div className="p-6 shrink-0 bg-[var(--color-bg-card)] border-t border-[var(--color-border)]"><button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-lg py-3 rounded-xl font-bold shadow-lg">שמור שינויים</button></div>
         </div>
 
-        {/* צד שמאל - בחירת קטגוריה (עם פתרון הגלילה) */}
         <div className="w-full md:w-1/2 flex flex-col bg-[var(--color-bg-card)] h-1/2 md:h-full overflow-hidden">
           <div className="flex bg-[var(--color-bg-input)] border-b border-[var(--color-border)] p-2 shrink-0"><button onClick={() => { setActiveTabType('expense'); setView('main'); }} className={`flex-1 py-3 text-center text-sm font-bold rounded-xl transition-all ${activeTabType === 'expense' ? 'bg-[var(--color-bg-card)] text-[var(--color-text-main)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הוצאות</button><button onClick={() => { setActiveTabType('income'); setView('main'); }} className={`flex-1 py-3 text-center text-sm font-bold rounded-xl transition-all ${activeTabType === 'income' ? 'bg-[var(--color-bg-card)] text-[var(--color-text-main)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הכנסות</button></div>
           <div className="flex-1 overflow-y-auto p-4 custom-scrollbar min-h-0">
-            {activeTabType === 'income' ? (<div className="grid grid-cols-2 gap-3">{INCOMES.map(cat => { const Icon = cat.icon || TagIcon; const isSelected = selectedSubCatId === cat.id; return (<button key={cat.id} onClick={() => setSelectedSubCatId(cat.id)} className={`flex flex-col items-center p-4 rounded-xl border transition-all ${isSelected ? 'border-emerald-500 bg-emerald-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-emerald-500'}`}><Icon size={24} className={`mb-2 ${cat.color}`} strokeWidth={1.5} /><span className="text-sm font-medium text-[var(--color-text-main)] text-center">{cat.name}</span></button>)})}</div>) : view === 'main' ? (<div className="grid grid-cols-2 gap-3">{EXPENSES.map(mainCat => { const Icon = mainCat.icon || TagIcon; const isSelected = selectedMainCatObj.id === mainCat.id; return (<button key={mainCat.id} onClick={() => { setSelectedMainCatObj(mainCat); setView('sub'); }} className={`flex flex-col items-center p-4 rounded-xl border transition-all ${isSelected ? 'border-indigo-500 bg-indigo-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-indigo-500'}`}><Icon size={24} className={`mb-2 ${mainCat.color}`} strokeWidth={1.5} /><span className="text-sm font-medium text-[var(--color-text-main)] text-center">{mainCat.name}</span></button>)})}</div>) : (<div><div className="flex items-center justify-between mb-4 sticky top-0 bg-[var(--color-bg-card)] z-10 py-2 border-b border-[var(--color-border)]"><h4 className="text-lg font-bold text-[var(--color-text-main)] flex items-center gap-2">{React.createElement(selectedMainCatObj.icon || TagIcon, { size: 20, className: selectedMainCatObj.color })} {selectedMainCatObj.name}</h4><button onClick={() => setView('main')} className="text-sm text-[var(--color-text-muted)] flex items-center hover:text-[var(--color-text-main)]">חזור <ChevronRight size={16} /></button></div><div className="grid grid-cols-2 gap-3 pb-8">{selectedMainCatObj.subs.map(sub => { const SubIcon = sub.icon || TagIcon; const isSelected = selectedSubCatId === sub.id; return (<button key={sub.id} onClick={() => setSelectedSubCatId(sub.id)} className={`flex flex-col items-center justify-center p-4 border rounded-xl transition-all ${isSelected ? 'border-indigo-500 bg-indigo-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-indigo-500'}`}><SubIcon size={24} className={`mb-2 ${isSelected ? 'text-indigo-600' : 'text-[var(--color-text-muted)]'}`} strokeWidth={1.5} /><span className="text-sm font-medium text-center text-[var(--color-text-main)]">{sub.name}</span></button>);})}</div></div>)}
+            {activeTabType === 'income' ? (
+              <div className="grid grid-cols-2 gap-3">
+                 {(categories.incomes || []).map(cat => { 
+                   const isSelected = selectedSubCatId === cat.id; 
+                   return (
+                     <button type="button" key={cat.id} onClick={() => setSelectedSubCatId(cat.id)} 
+                       className={`flex flex-col items-center p-4 rounded-xl border transition-all ${isSelected ? `${cat.bg} ${cat.color} border-current` : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-emerald-500'}`}>
+                       <DynamicIcon name={cat.icon} size={24} className={`mb-2 ${isSelected ? 'text-current' : cat.color}`} strokeWidth={1.5} />
+                       <span className={`text-sm font-medium text-center ${isSelected ? 'text-current' : 'text-[var(--color-text-main)]'}`}>{cat.name}</span>
+                     </button>
+                   )
+                 })}
+              </div>
+            ) : view === 'main' ? (
+              <div className="grid grid-cols-2 gap-3">
+                 {(categories.expenses || []).map(mainCat => { 
+                   const isSelected = selectedMainCatObj?.id === mainCat.id; 
+                   return (
+                     <button type="button" key={mainCat.id} onClick={() => { setSelectedMainCatObj(mainCat); setView('sub'); }} 
+                       className={`flex flex-col items-center p-4 rounded-xl border transition-all ${isSelected ? `${mainCat.bg} ${mainCat.color} border-current` : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-indigo-500'}`}>
+                       <DynamicIcon name={mainCat.icon} size={24} className={`mb-2 ${isSelected ? 'text-current' : mainCat.color}`} strokeWidth={1.5} />
+                       <span className={`text-sm font-medium text-center ${isSelected ? 'text-current' : 'text-[var(--color-text-main)]'}`}>{mainCat.name}</span>
+                     </button>
+                   )
+                 })}
+              </div>
+            ) : (
+              <div>
+                 <div className="flex items-center justify-between mb-4 sticky top-0 bg-[var(--color-bg-card)] z-10 py-2 border-b border-[var(--color-border)]">
+                   <h4 className={`text-lg font-bold ${selectedMainCatObj?.color || 'text-[var(--color-text-main)]'} flex items-center gap-2`}>
+                     <DynamicIcon name={selectedMainCatObj?.icon} size={20} className="text-current" /> {selectedMainCatObj?.name}
+                   </h4>
+                   <button type="button" onClick={() => setView('main')} className="text-sm text-[var(--color-text-muted)] flex items-center hover:text-[var(--color-text-main)]">חזור <ChevronRight size={16} /></button>
+                 </div>
+                 <div className="grid grid-cols-2 gap-3 pb-8">
+                   {(selectedMainCatObj?.subs || []).map(sub => { 
+                     const isSelected = selectedSubCatId === sub.id; 
+                     return (
+                       <button type="button" key={sub.id} onClick={() => setSelectedSubCatId(sub.id)} 
+                         className={`flex flex-col items-center justify-center p-4 border rounded-xl transition-all ${isSelected ? `${selectedMainCatObj?.bg} ${selectedMainCatObj?.color} border-current` : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-indigo-500'}`}>
+                         <DynamicIcon name={sub.icon} size={24} className={`mb-2 ${isSelected ? 'text-current' : 'text-[var(--color-text-muted)]'}`} strokeWidth={1.5} />
+                         <span className={`text-sm font-medium text-center ${isSelected ? 'text-current' : 'text-[var(--color-text-main)]'}`}>{sub.name}</span>
+                       </button>
+                     );
+                   })}
+                 </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -888,21 +897,18 @@ function TransactionModal({ tx, getCategoryDetails, accounts, transactions, onCl
   );
 }
 
-function AddTransactionModal({ accounts, onClose, onSave, getCategoryDetails }) {
+function AddTransactionModal({ accounts, onClose, onSave, getCategoryDetails, categories }) {
   const todayStr = `${String(new Date().getDate()).padStart(2, '0')}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${new Date().getFullYear()}`;
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(todayStr);
-  
-  // הגדרת "ארנק (מזומן)" כברירת המחדל האוטומטית לתנועות ידניות
   const [accountId, setAccountId] = useState('wallet');
-  
   const [notes, setNotes] = useState('');
   const [type, setType] = useState('expense');
   const [selectedSubCatId, setSelectedSubCatId] = useState('misc_uncategorized');
   
   const [view, setView] = useState('main'); 
-  const [selectedMainCatObj, setSelectedMainCatObj] = useState(EXPENSES[0]);
+  const [selectedMainCatObj, setSelectedMainCatObj] = useState(categories.expenses?.[0] || null);
 
   const handleSave = (e) => {
      e.preventDefault();
@@ -914,10 +920,8 @@ function AddTransactionModal({ accounts, onClose, onSave, getCategoryDetails }) 
   return (
      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-6">
        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={onClose}></div>
-       {/* פתרון הגלילה כמו בפופ-אפ הקודם: h-[90vh] md:h-[85vh] */}
        <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-border)] w-full max-w-5xl rounded-3xl shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-[85vh] overflow-hidden animate-in zoom-in-95 duration-200">
          
-         {/* צד ימין במסך - טופס הרישום (סודר כפי שביקשת) */}
          <div className="w-full md:w-1/2 flex flex-col bg-[var(--color-bg-main)] border-l border-[var(--color-border)] h-1/2 md:h-full overflow-hidden">
             <div className="p-6 flex justify-between items-center bg-[var(--color-bg-card)] border-b border-[var(--color-border)] shrink-0">
               <h3 className="text-xl text-[var(--color-text-main)] font-bold">הוספת תנועה ידנית</h3>
@@ -940,8 +944,8 @@ function AddTransactionModal({ accounts, onClose, onSave, getCategoryDetails }) 
                
                <div className="mt-4 bg-[var(--color-bg-card)] p-4 rounded-xl border border-[var(--color-border)] flex items-center justify-between">
                  <span className="text-sm text-[var(--color-text-muted)] font-bold">סיווג נבחר:</span>
-                 <span className={`text-sm font-bold ${type === 'income' ? 'text-emerald-500' : 'text-indigo-500'}`}>
-                   {getCategoryDetails(selectedSubCatId)?.subCat?.name || (type === 'income' ? 'הכנסה כללית' : 'ללא סיווג')}
+                 <span className={`text-sm font-bold ${getCategoryDetails(selectedSubCatId, categories)?.mainCat?.color || (type === 'income' ? 'text-emerald-500' : 'text-indigo-500')}`}>
+                   {getCategoryDetails(selectedSubCatId, categories)?.subCat?.name || (type === 'income' ? 'הכנסה כללית' : 'ללא סיווג')}
                  </span>
                </div>
                
@@ -949,7 +953,6 @@ function AddTransactionModal({ accounts, onClose, onSave, getCategoryDetails }) 
             </form>
          </div>
 
-         {/* צד שמאל במסך - הקטגוריות */}
          <div className="w-full md:w-1/2 flex flex-col bg-[var(--color-bg-card)] h-1/2 md:h-full overflow-hidden">
             <div className="flex bg-[var(--color-bg-input)] border-b border-[var(--color-border)] p-2 shrink-0">
                <button type="button" onClick={() => { setType('expense'); setView('main'); setSelectedSubCatId('misc_uncategorized'); }} className={`flex-1 py-3 text-center text-sm font-bold rounded-xl transition-all ${type === 'expense' ? 'bg-[var(--color-bg-card)] text-[var(--color-text-main)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>הוצאות</button>
@@ -958,17 +961,49 @@ function AddTransactionModal({ accounts, onClose, onSave, getCategoryDetails }) 
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar min-h-0">
               {type === 'income' ? (
                 <div className="grid grid-cols-2 gap-3">
-                   {INCOMES.map(cat => { const Icon = cat.icon || TagIcon; const isSelected = selectedSubCatId === cat.id; return (<button type="button" key={cat.id} onClick={() => setSelectedSubCatId(cat.id)} className={`flex flex-col items-center p-4 rounded-xl border transition-all ${isSelected ? 'border-emerald-500 bg-emerald-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-emerald-500'}`}><Icon size={24} className={`mb-2 ${cat.color}`} strokeWidth={1.5} /><span className="text-sm font-medium text-[var(--color-text-main)] text-center">{cat.name}</span></button>)})}
+                   {(categories.incomes || []).map(cat => { 
+                     const isSelected = selectedSubCatId === cat.id; 
+                     return (
+                       <button type="button" key={cat.id} onClick={() => setSelectedSubCatId(cat.id)} 
+                         className={`flex flex-col items-center p-4 rounded-xl border transition-all ${isSelected ? `${cat.bg} ${cat.color} border-current` : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-emerald-500'}`}>
+                         <DynamicIcon name={cat.icon} size={24} className={`mb-2 ${isSelected ? 'text-current' : cat.color}`} strokeWidth={1.5} />
+                         <span className={`text-sm font-medium text-center ${isSelected ? 'text-current' : 'text-[var(--color-text-main)]'}`}>{cat.name}</span>
+                       </button>
+                     )
+                   })}
                 </div>
               ) : view === 'main' ? (
                 <div className="grid grid-cols-2 gap-3">
-                   {EXPENSES.map(mainCat => { const Icon = mainCat.icon || TagIcon; const isSelected = selectedMainCatObj.id === mainCat.id; return (<button type="button" key={mainCat.id} onClick={() => { setSelectedMainCatObj(mainCat); setView('sub'); }} className={`flex flex-col items-center p-4 rounded-xl border transition-all ${isSelected ? 'border-indigo-500 bg-indigo-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-indigo-500'}`}><Icon size={24} className={`mb-2 ${mainCat.color}`} strokeWidth={1.5} /><span className="text-sm font-medium text-[var(--color-text-main)] text-center">{mainCat.name}</span></button>)})}
+                   {(categories.expenses || []).map(mainCat => { 
+                     const isSelected = selectedMainCatObj?.id === mainCat.id; 
+                     return (
+                       <button type="button" key={mainCat.id} onClick={() => { setSelectedMainCatObj(mainCat); setView('sub'); }} 
+                         className={`flex flex-col items-center p-4 rounded-xl border transition-all ${isSelected ? `${mainCat.bg} ${mainCat.color} border-current` : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-indigo-500'}`}>
+                         <DynamicIcon name={mainCat.icon} size={24} className={`mb-2 ${isSelected ? 'text-current' : mainCat.color}`} strokeWidth={1.5} />
+                         <span className={`text-sm font-medium text-center ${isSelected ? 'text-current' : 'text-[var(--color-text-main)]'}`}>{mainCat.name}</span>
+                       </button>
+                     )
+                   })}
                 </div>
               ) : (
                 <div>
-                   <div className="flex items-center justify-between mb-4 sticky top-0 bg-[var(--color-bg-card)] z-10 py-2 border-b border-[var(--color-border)]"><h4 className="text-lg font-bold text-[var(--color-text-main)] flex items-center gap-2">{React.createElement(selectedMainCatObj.icon || TagIcon, { size: 20, className: selectedMainCatObj.color })} {selectedMainCatObj.name}</h4><button type="button" onClick={() => setView('main')} className="text-sm text-[var(--color-text-muted)] flex items-center hover:text-[var(--color-text-main)]">חזור <ChevronRight size={16} /></button></div>
+                   <div className="flex items-center justify-between mb-4 sticky top-0 bg-[var(--color-bg-card)] z-10 py-2 border-b border-[var(--color-border)]">
+                     <h4 className={`text-lg font-bold ${selectedMainCatObj?.color || 'text-[var(--color-text-main)]'} flex items-center gap-2`}>
+                       <DynamicIcon name={selectedMainCatObj?.icon} size={20} className="text-current" /> {selectedMainCatObj?.name}
+                     </h4>
+                     <button type="button" onClick={() => setView('main')} className="text-sm text-[var(--color-text-muted)] flex items-center hover:text-[var(--color-text-main)]">חזור <ChevronRight size={16} /></button>
+                   </div>
                    <div className="grid grid-cols-2 gap-3 pb-8">
-                     {selectedMainCatObj.subs.map(sub => { const SubIcon = sub.icon || TagIcon; const isSelected = selectedSubCatId === sub.id; return (<button type="button" key={sub.id} onClick={() => setSelectedSubCatId(sub.id)} className={`flex flex-col items-center justify-center p-4 border rounded-xl transition-all ${isSelected ? 'border-indigo-500 bg-indigo-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-indigo-500'}`}><SubIcon size={24} className={`mb-2 ${isSelected ? 'text-indigo-600' : 'text-[var(--color-text-muted)]'}`} strokeWidth={1.5} /><span className="text-sm font-medium text-center text-[var(--color-text-main)]">{sub.name}</span></button>);})}
+                     {(selectedMainCatObj?.subs || []).map(sub => { 
+                       const isSelected = selectedSubCatId === sub.id; 
+                       return (
+                         <button type="button" key={sub.id} onClick={() => setSelectedSubCatId(sub.id)} 
+                           className={`flex flex-col items-center justify-center p-4 border rounded-xl transition-all ${isSelected ? `${selectedMainCatObj?.bg} ${selectedMainCatObj?.color} border-current` : 'border-[var(--color-border)] bg-[var(--color-bg-input)] hover:border-indigo-500'}`}>
+                           <DynamicIcon name={sub.icon} size={24} className={`mb-2 ${isSelected ? 'text-current' : 'text-[var(--color-text-muted)]'}`} strokeWidth={1.5} />
+                           <span className={`text-sm font-medium text-center ${isSelected ? 'text-current' : 'text-[var(--color-text-main)]'}`}>{sub.name}</span>
+                         </button>
+                       );
+                     })}
                    </div>
                 </div>
               )}
