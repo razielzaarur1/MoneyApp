@@ -78,9 +78,12 @@ const fixTimezone = (dateStr) => {
   try {
     let d = new Date(dateStr);
     if (isNaN(d.getTime())) d = new Date(dateStr.replace(' ', 'T') + 'Z');
+    // אם גם עכשיו התאריך לא תקין, נחזיר את המחרוזת המקורית כדי למנוע "Invalid Date"
+    if (isNaN(d.getTime())) return String(dateStr);
+    
     d.setHours(d.getHours() + 2);
     return d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) + ' (' + d.toLocaleDateString('he-IL') + ')';
-  } catch (e) { return dateStr; }
+  } catch (e) { return String(dateStr); }
 };
 
 // ==========================================
@@ -123,41 +126,68 @@ const MonthDropdown = ({ availableMonths, selectedMonth, setSelectedMonth, isDar
   );
 };
 
-const TransactionRow = ({ tx, isDark, rawCategories }) => {
-  const [expanded, setExpanded] = useState(false);
+const TransactionRow = ({ tx, isDark, rawCategories, isExpanded, onToggle }) => {
   const { main, sub } = getCategoryMeta(tx.categoryId || tx.category, rawCategories, isDark);
   const isIncome = main.type === 'income';
   const iconName = sub?.icon || main.icon;
 
   return (
     <View style={[styles.txRow, isDark ? styles.txRowDark : styles.txRowLight]}>
-      <TouchableOpacity style={styles.txRowHeader} onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setExpanded(!expanded); }} activeOpacity={0.7}>
+      <TouchableOpacity style={styles.txRowHeader} onPress={onToggle} activeOpacity={0.7}>
         <View style={styles.txRowLeft}>
           <View style={[styles.txIconBox, { backgroundColor: isDark ? '#334155' : `${main.hexColor}20` }]}>
             <DynamicIcon name={iconName} size={18} color={main.hexColor} />
           </View>
-          <View>
+          <View style={{ flexShrink: 1 }}>
             <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 6}}>
-              <Text style={[styles.txName, isDark && styles.textWhite]}>{tx.description}</Text>
+              <Text style={[styles.txName, isDark && styles.textWhite]} numberOfLines={1}>{tx.description}</Text>
               {tx.linkedTransactionId && <Icons.Link size={12} color="#3b82f6" />}
+              {tx.notes && <Icons.FileText size={10} color={isDark ? '#94a3b8' : '#64748b'} />}
+              {tx.tags && <Icons.Tag size={10} color={isDark ? '#94a3b8' : '#64748b'} />}
             </View>
-            <View style={styles.txMeta}>
+            <View style={[styles.txMeta, { flexWrap: 'wrap', gap: 4, marginTop: 2 }]}>
               <Text style={[styles.txDate, isDark && styles.textGrayDark]}>{tx.date}</Text>
               <Text style={[styles.txDot, isDark && styles.textGrayDark]}>•</Text>
-              <View style={[styles.txBadge, isDark && styles.txBadgeDark]}><Text style={[styles.txBadgeText, isDark && styles.textGrayDark]}>{main.name}</Text></View>
-              {tx.tags && <Icons.Tag size={10} color={isDark ? '#94a3b8' : '#64748b'} style={{marginRight: 4}}/>}
+              {/* מציג תת קטגוריה אם ישנה, אחרת מציג ראשית */}
+              <View style={[styles.txBadge, isDark && styles.txBadgeDark]}>
+                <Text style={[styles.txBadgeText, isDark && styles.textGrayDark]}>{sub ? sub.name : main.name}</Text>
+              </View>
+              
+              {/* הצגת תנועה זמנית אם סגור */}
+              {tx.status === 'pending' && (
+                <View style={[styles.txBadge, { backgroundColor: 'rgba(245,158,11,0.15)' }]}>
+                  <Text style={[styles.txBadgeText, { color: isDark ? '#fbbf24' : '#d97706' }]}>זמנית</Text>
+                </View>
+              )}
+
+              {/* הצגת תשלומים אם קיימים */}
+              {(tx.installments || (tx.currentInstallment && tx.totalInstallments)) && (
+                <View style={[styles.txBadge, { backgroundColor: 'rgba(59,130,246,0.15)' }]}>
+                  <Text style={[styles.txBadgeText, { color: isDark ? '#60a5fa' : '#2563eb' }]}>
+                    {tx.installments ? tx.installments : `תשלום ${tx.currentInstallment} מתוך ${tx.totalInstallments}`}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
         <View style={styles.txRowRight}>
           <Text style={[styles.txAmount, isIncome ? styles.textIncome : (isDark ? styles.textWhite : styles.textExpense)]} dir="ltr">{isIncome ? '+' : ''}{tx.amount.toLocaleString()} ₪</Text>
-          {expanded ? <Icons.ChevronUp size={16} color={isDark ? '#94a3b8' : '#cbd5e1'} /> : <Icons.ChevronDown size={16} color={isDark ? '#94a3b8' : '#cbd5e1'} />}
+          {isExpanded ? <Icons.ChevronUp size={16} color={isDark ? '#94a3b8' : '#cbd5e1'} /> : <Icons.ChevronDown size={16} color={isDark ? '#94a3b8' : '#cbd5e1'} />}
         </View>
       </TouchableOpacity>
 
-      {expanded && (
+      {isExpanded && (
         <View style={[styles.txDetails, isDark ? styles.txDetailsDark : styles.txDetailsLight]}>
           <View style={styles.txDetailsTop}>
+            {/* במידה ויש תנועה מקושרת נציג זאת בתיבה בולטת */}
+            {tx.linkedTransactionId && (
+              <View style={[styles.txDetailBlock, {width: '100%', flexDirection: 'row-reverse', alignItems: 'center', gap: 8, backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff', padding: 8, borderRadius: 8, marginBottom: 12}]}>
+                <Icons.Link size={16} color="#3b82f6" />
+                <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark, {marginBottom: 0, fontSize: 12}]}>תנועה קשורה (למשל החזר על הוצאה):</Text>
+                <Text style={[styles.txDetailValue, {color: '#3b82f6', fontWeight: 'bold'}]}>#{tx.linkedTransactionId}</Text>
+              </View>
+            )}
             <View style={styles.txDetailBlock}>
               <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark]}>תאריך עסקה</Text>
               <Text style={[styles.txDetailValue, isDark && styles.textWhite]}>{tx.date}</Text>
@@ -167,21 +197,15 @@ const TransactionRow = ({ tx, isDark, rawCategories }) => {
               <Text style={[styles.txDetailValue, isDark && styles.textWhite]}>{main.name} {sub ? `> ${sub.name}` : ''}</Text>
             </View>
             {tx.notes && (
-              <View style={styles.txDetailBlock}>
+              <View style={[styles.txDetailBlock, {width: '100%'}]}>
                 <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark]}>הערות</Text>
                 <Text style={[styles.txDetailValue, isDark && styles.textWhite]}>{tx.notes}</Text>
               </View>
             )}
             {tx.tags && (
-              <View style={styles.txDetailBlock}>
+              <View style={[styles.txDetailBlock, {width: '100%'}]}>
                 <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark]}>תגיות</Text>
                 <Text style={[styles.txDetailValue, isDark && styles.textWhite]}>{tx.tags}</Text>
-              </View>
-            )}
-            {tx.linkedTransactionId && (
-              <View style={styles.txDetailBlock}>
-                <Text style={[styles.txDetailLabel, isDark && styles.textGrayDark]}>מקושר לתנועה</Text>
-                <Text style={[styles.txDetailValue, isDark && styles.textWhite, {color: '#3b82f6'}]}>#{tx.linkedTransactionId}</Text>
               </View>
             )}
           </View>
@@ -198,42 +222,60 @@ const TransactionRow = ({ tx, isDark, rawCategories }) => {
 // ==========================================
 // SCREENS
 // ==========================================
-const DashboardScreen = ({ isDark, navigateTo, filteredTxs, totalIncome, totalExpense, balance, availableMonths, selectedMonth, setSelectedMonth, rawCategories }) => (
-  <ScrollView style={styles.screen} contentContainerStyle={styles.screenContent} showsVerticalScrollIndicator={false}>
-    <View style={styles.dashHeader}>
-      <View><Text style={[styles.dashTitle, isDark && styles.textWhite]}>סקירה כללית</Text><Text style={[styles.dashSubtitle, isDark && styles.textGrayDark]}>התקציב שלך מעודכן.</Text></View>
-      <MonthDropdown availableMonths={availableMonths} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} isDark={isDark} />
-    </View>
+const DashboardScreen = ({ isDark, navigateTo, filteredTxs, totalIncome, totalExpense, balance, availableMonths, selectedMonth, setSelectedMonth, rawCategories }) => {
+  const [expandedTxId, setExpandedTxId] = useState(null);
 
-    <LinearGradient colors={['#2563eb', '#4338ca']} style={styles.balanceCard} start={{x: 0, y: 0}} end={{x: 1, y: 1}}>
-      <View style={styles.cardGlow1} /><View style={styles.cardGlow2} />
-      <Text style={styles.cardLabel}>מאזן חודשי פנוי</Text>
-      <Text style={styles.cardBalance} dir="ltr">{balance < 0 ? '-' : ''}{formatCurrency(balance)}</Text>
-      
-      <View style={styles.cardStatsRow}>
-        <View style={styles.cardStatBox}>
-          <View style={styles.statLabelRow}><Icons.TrendingUp size={14} color="#6ee7b7" /><Text style={styles.statLabelText}>הכנסות</Text></View>
-          <Text style={styles.statValue} dir="ltr">{formatCurrency(totalIncome)}</Text>
-        </View>
-        <View style={styles.cardStatBox}>
-          <View style={styles.statLabelRow}><Icons.TrendingDown size={14} color="#fda4af" /><Text style={styles.statLabelText}>הוצאות</Text></View>
-          <Text style={styles.statValue} dir="ltr">{formatCurrency(totalExpense)}</Text>
-        </View>
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={styles.screenContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.dashHeader}>
+        <View><Text style={[styles.dashTitle, isDark && styles.textWhite]}>סקירה כללית</Text><Text style={[styles.dashSubtitle, isDark && styles.textGrayDark]}>התקציב שלך מעודכן.</Text></View>
+        <MonthDropdown availableMonths={availableMonths} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} isDark={isDark} />
       </View>
-    </LinearGradient>
 
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>תנועות אחרונות</Text>
-        <TouchableOpacity onPress={() => navigateTo('transactions')}><Text style={styles.sectionLink}>הצג הכל</Text></TouchableOpacity>
+      <LinearGradient colors={['#2563eb', '#4338ca']} style={styles.balanceCard} start={{x: 0, y: 0}} end={{x: 1, y: 1}}>
+        <View style={styles.cardGlow1} /><View style={styles.cardGlow2} />
+        <Text style={styles.cardLabel}>מאזן חודשי פנוי</Text>
+        <Text style={styles.cardBalance} dir="ltr">{balance < 0 ? '-' : ''}{formatCurrency(balance)}</Text>
+        
+        <View style={styles.cardStatsRow}>
+          <View style={styles.cardStatBox}>
+            <View style={styles.statLabelRow}><Icons.TrendingUp size={14} color="#6ee7b7" /><Text style={styles.statLabelText}>הכנסות</Text></View>
+            <Text style={styles.statValue} dir="ltr">{formatCurrency(totalIncome)}</Text>
+          </View>
+          <View style={styles.cardStatBox}>
+            <View style={styles.statLabelRow}><Icons.TrendingDown size={14} color="#fda4af" /><Text style={styles.statLabelText}>הוצאות</Text></View>
+            <Text style={styles.statValue} dir="ltr">{formatCurrency(totalExpense)}</Text>
+          </View>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>תנועות אחרונות</Text>
+          <TouchableOpacity onPress={() => navigateTo('transactions')}><Text style={styles.sectionLink}>הצג הכל</Text></TouchableOpacity>
+        </View>
+        {filteredTxs.length === 0 ? <Text style={styles.emptyText}>אין תנועות</Text> : filteredTxs.slice(0, 4).map(tx => (
+          <TransactionRow 
+            key={tx.id} 
+            tx={tx} 
+            isDark={isDark} 
+            rawCategories={rawCategories} 
+            isExpanded={expandedTxId === tx.id}
+            onToggle={() => {
+               LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+               setExpandedTxId(expandedTxId === tx.id ? null : tx.id);
+            }}
+          />
+        ))}
       </View>
-      {filteredTxs.length === 0 ? <Text style={styles.emptyText}>אין תנועות</Text> : filteredTxs.slice(0, 4).map(tx => <TransactionRow key={tx.id} tx={tx} isDark={isDark} rawCategories={rawCategories} />)}
-    </View>
-  </ScrollView>
-);
+    </ScrollView>
+  );
+};
 
 const TransactionsScreen = ({ isDark, filteredTxs, availableMonths, selectedMonth, setSelectedMonth, rawCategories }) => {
   const [filter, setFilter] = useState('all');
+  const [expandedTxId, setExpandedTxId] = useState(null);
+
   const filtered = filteredTxs.filter(tx => {
     const { main } = getCategoryMeta(tx.categoryId || tx.category, rawCategories, isDark);
     if (filter === 'all') return true;
@@ -257,9 +299,21 @@ const TransactionsScreen = ({ isDark, filteredTxs, availableMonths, selectedMont
         ))}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: 100}}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenContent}>
         {filtered.length === 0 && <Text style={styles.emptyText}>לא נמצאו תנועות</Text>}
-        {filtered.map(tx => <TransactionRow key={tx.id} tx={tx} isDark={isDark} rawCategories={rawCategories} />)}
+        {filtered.map(tx => (
+          <TransactionRow 
+            key={tx.id} 
+            tx={tx} 
+            isDark={isDark} 
+            rawCategories={rawCategories}
+            isExpanded={expandedTxId === tx.id}
+            onToggle={() => {
+               LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+               setExpandedTxId(expandedTxId === tx.id ? null : tx.id);
+            }}
+          />
+        ))}
       </ScrollView>
     </View>
   );
@@ -792,7 +846,8 @@ const styles = StyleSheet.create({
   avatarText: { color: 'white', fontWeight: 'bold' },
   appTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b' },
   
-  mainContent: { flex: 1 }, screen: { flex: 1, paddingHorizontal: 20 }, screenContent: { paddingBottom: 100, paddingTop: 10 },
+  // הוספת מרווח תחתון מכובד שמונע הסתרה על ידי שורת הניווט (Bottom Nav)
+  mainContent: { flex: 1 }, screen: { flex: 1, paddingHorizontal: 20 }, screenContent: { paddingBottom: 140, paddingTop: 10 },
   dashHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   dashTitle: { fontSize: 24, fontWeight: 'bold', color: '#1e293b', textAlign: 'right' }, dashSubtitle: { fontSize: 12, color: '#64748b', textAlign: 'right', marginTop: 4 },
   
@@ -849,8 +904,9 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { width: '100%', padding: 24, borderRadius: 24 },
 
-  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row-reverse', justifyContent: 'space-around', alignItems: 'center', paddingVertical: 12, paddingBottom: 24, borderTopWidth: 1 },
-  bottomNavLight: { backgroundColor: 'rgba(255,255,255,0.9)', borderColor: '#e2e8f0' }, bottomNavDark: { backgroundColor: 'rgba(2,6,23,0.9)', borderColor: '#1e293b' },
+  // הוספת ריווח תחתון מותאם כדי ליצור הפרדה מכפתורי הניווט של הטלפון
+  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row-reverse', justifyContent: 'space-around', alignItems: 'center', paddingTop: 12, paddingBottom: Platform.OS === 'ios' ? 34 : 28, borderTopWidth: 1 },
+  bottomNavLight: { backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e2e8f0' }, bottomNavDark: { backgroundColor: 'rgba(2,6,23,0.95)', borderColor: '#1e293b' },
   navItem: { alignItems: 'center', gap: 4, width: 60 }, navIconBox: { padding: 6, borderRadius: 12 },
   navIconActiveLight: { backgroundColor: '#dbeafe' }, navIconActiveDark: { backgroundColor: 'rgba(37,99,235,0.2)' }, navLabel: { fontSize: 10, fontWeight: '600' }
 });
